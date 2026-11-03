@@ -1,0 +1,850 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>CallCenter Intelligence</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* Layout: consola de supervisión — barra lateral azul noche, superficie de trabajo clara, cifras en monoespaciada.
+   Color: azul oscuro (marca), blanco, verde (logro); rojo/ámbar solo como semántica. */
+:root{
+  --bg:#f4f6f9; --surface:#ffffff; --surface-2:#eef1f5; --line:#dfe4eb; --line-2:#c9d1dc;
+  --fg:#0f1b2d; --fg-2:#46536a; --fg-3:#7a8699;
+  --navy:#0d2240; --navy-fg:#e8eef7; --navy-2:#16305a;
+  --green:#12a172; --green-soft:#e1f4ec; --red:#c7392f; --red-soft:#fbe8e6; --amber:#a76a00; --amber-soft:#fbf0d8;
+  --blue:#2c5fb3; --blue-soft:#e6eefb;
+  --f-body:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --shadow:0 1px 2px rgba(13,34,64,.06),0 6px 20px rgba(13,34,64,.06);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b1220; --surface:#111a2b; --surface-2:#172338; --line:#22304a; --line-2:#2e3f5e;
+  --fg:#e6ecf5; --fg-2:#a7b4c8; --fg-3:#76839a;
+  --navy:#081120; --navy-fg:#dfe7f3; --navy-2:#13233f;
+  --green:#34c995; --green-soft:#0f2c22; --red:#ff7b6f; --red-soft:#33181a; --amber:#f0b44c; --amber-soft:#2e2412;
+  --blue:#7fa8f0; --blue-soft:#15243f; --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1220; --surface:#111a2b; --surface-2:#172338; --line:#22304a; --line-2:#2e3f5e;
+  --fg:#e6ecf5; --fg-2:#a7b4c8; --fg-3:#76839a;
+  --navy:#081120; --navy-fg:#dfe7f3; --navy-2:#13233f;
+  --green:#34c995; --green-soft:#0f2c22; --red:#ff7b6f; --red-soft:#33181a; --amber:#f0b44c; --amber-soft:#2e2412;
+  --blue:#7fa8f0; --blue-soft:#15243f; --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25); color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:6px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font-size:1.55rem;font-weight:600;letter-spacing:-.015em}
+h2{font-size:.95rem;font-weight:600}
+p{margin:0}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;color:var(--fg-3);font-weight:600}
+.muted{color:var(--fg-2)} .faint{color:var(--fg-3)} .small{font-size:.78rem}
+
+.app{display:grid;grid-template-columns:228px minmax(0,1fr);min-height:100%}
+.side{background:var(--navy);color:var(--navy-fg);position:sticky;top:0;height:100vh;height:100dvh;display:flex;flex-direction:column;padding:18px 12px;gap:2px;overflow-y:auto}
+.brand{display:flex;gap:10px;align-items:center;padding:2px 8px 18px}
+.brand .mark{width:28px;height:28px;border-radius:7px;background:var(--green);display:grid;place-items:center;flex:none}
+.brand b{font-weight:600;line-height:1.15;font-size:.92rem}
+.brand span{display:block;font-size:.7rem;opacity:.65;font-weight:400}
+.nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;color:var(--navy-fg);opacity:.78;text-decoration:none;font-weight:500}
+.nav a:hover{background:var(--navy-2);opacity:1}
+.nav a.on{background:var(--navy-2);opacity:1;box-shadow:inset 2px 0 0 var(--green)}
+.nav a .badge{margin-left:auto;font-size:.65rem;font-family:var(--f-mono);background:var(--amber);color:var(--navy);border-radius:999px;padding:0 6px;font-weight:600}
+.side-foot{margin-top:auto;padding:12px 10px 0;border-top:1px solid var(--navy-2);font-size:.72rem;opacity:.75;display:grid;gap:8px}
+.side-foot button{background:transparent;border:1px solid var(--navy-2);color:var(--navy-fg);border-radius:7px;padding:6px 8px;cursor:pointer;text-align:left}
+.main{min-width:0;display:flex;flex-direction:column}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding-block:10px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.top .grow{flex:1}
+.content{padding-block:22px 64px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));width:100%;max-width:1320px;margin:0 auto;display:grid;gap:18px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line-2);background:var(--surface);padding:7px 12px;border-radius:8px;cursor:pointer;font-weight:500;font-size:.84rem;color:var(--fg);text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--fg-3)}
+.btn.primary{background:var(--navy);border-color:var(--navy);color:#fff}
+:root[data-theme="dark"] .btn.primary{background:var(--green);border-color:var(--green);color:#06140f}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{background:var(--green);border-color:var(--green);color:#06140f}}
+.btn.ghost{background:transparent;border-color:transparent}
+.btn.sm{padding:4px 9px;font-size:.76rem}
+.btn.danger{color:var(--red)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.input,select.input{border:1px solid var(--line-2);background:var(--surface);border-radius:8px;padding:6px 9px;min-width:0;max-width:100%}
+.field{display:grid;gap:3px}
+.field label{font-size:.72rem;color:var(--fg-2);font-weight:500}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.filters .field{min-width:130px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;min-width:0}
+.panel-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.panel-b{padding:16px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.page-h{display:flex;justify-content:space-between;align-items:end;gap:14px;flex-wrap:wrap}
+.page-h p{margin-top:4px;max-width:70ch}
+
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 14px;display:grid;gap:6px;min-width:0}
+.kpi .lab{font-size:.74rem;color:var(--fg-2);font-weight:500;display:flex;justify-content:space-between;gap:6px}
+.kpi .v{font-family:var(--f-mono);font-size:1.4rem;font-weight:500;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .cmp{font-size:.72rem;color:var(--fg-3);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.kpi.group-q{border-top:3px solid var(--blue)}
+.kpi.group-p{border-top:3px solid var(--green)}
+.delta{display:inline-flex;align-items:center;gap:3px;font-family:var(--f-mono);font-size:.72rem;font-weight:500;padding:1px 6px;border-radius:999px}
+.delta.good{background:var(--green-soft);color:var(--green)} .delta.bad{background:var(--red-soft);color:var(--red)} .delta.flat{background:var(--surface-2);color:var(--fg-2)}
+
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:.7rem;font-weight:500;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--fg-2);white-space:nowrap}
+.chip.ok{background:var(--green-soft);color:var(--green);border-color:transparent}
+.chip.warn{background:var(--amber-soft);color:var(--amber);border-color:transparent}
+.chip.err{background:var(--red-soft);color:var(--red);border-color:transparent}
+.chip.info{background:var(--blue-soft);color:var(--blue);border-color:transparent}
+
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{text-align:left;font-weight:600;color:var(--fg-3);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
+th.sort{cursor:pointer;user-select:none} th.sort:hover{color:var(--fg)} th.on{color:var(--fg)}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;white-space:nowrap}
+td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+tbody tr.click{cursor:pointer} tbody tr.click:hover td{background:var(--surface-2)}
+th.grp-p{box-shadow:inset 0 -2px 0 var(--green)} th.grp-q{box-shadow:inset 0 -2px 0 var(--blue)}
+
+.drop{border:2px dashed var(--line-2);border-radius:14px;background:var(--surface);padding:34px 20px;display:grid;justify-items:center;gap:10px;text-align:center;transition:border-color .15s,background .15s;cursor:pointer}
+.drop.over{border-color:var(--green);background:var(--green-soft)}
+.drop svg{color:var(--fg-3)}
+.steps{display:flex;gap:6px;flex-wrap:wrap;font-size:.76rem}
+.steps span{padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--fg-3)}
+.steps span.on{background:var(--navy);color:#fff}
+.steps span.done{background:var(--green-soft);color:var(--green)}
+
+.bars{display:grid;gap:9px}
+.barrow{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:.8rem}
+.barrow .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track{height:10px;background:var(--surface-2);border-radius:5px;overflow:hidden}
+.track>span{display:block;height:100%;border-radius:5px;background:var(--green)}
+.track.q>span{background:var(--blue)}
+.track.low>span{background:var(--amber)}
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--fg-3);font-family:var(--f-mono);font-size:10px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.75rem;color:var(--fg-2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+.check{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.check:last-child{border-bottom:0}
+.check .sev{width:4px;border-radius:2px;align-self:stretch}
+.check .sev.err{background:var(--red)} .check .sev.warn{background:var(--amber)} .check .sev.info{background:var(--blue)} .check .sev.ok{background:var(--green)}
+.check details summary{cursor:pointer;color:var(--blue);font-size:.76rem;margin-top:4px}
+
+.empty{padding:36px 18px;text-align:center;display:grid;gap:10px;justify-items:center;color:var(--fg-2)}
+.empty b{color:var(--fg);font-size:1rem}
+.modal-bg{position:fixed;inset:0;background:rgba(8,17,32,.5);z-index:40;display:grid;place-items:center;padding:16px}
+.modal{background:var(--bg);border:1px solid var(--line);border-radius:14px;width:100%;max-width:860px;max-height:92vh;overflow:auto;display:grid;gap:14px;padding:20px;box-shadow:var(--shadow)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(16px);background:var(--navy);color:#fff;padding:10px 16px;border-radius:10px;font-size:.84rem;opacity:0;transition:all .2s;z-index:60;pointer-events:none;max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.menu-btn{display:none}
+.fade{animation:fade .22s ease}
+@keyframes fade{from{opacity:.4;transform:translateY(3px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:1180px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:900px){.g2,.g3{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:fixed;left:0;top:0;bottom:0;width:250px;z-index:30;transform:translateX(-100%);transition:transform .2s;padding-top:calc(18px + env(safe-area-inset-top,0px))}
+  .side.open{transform:none}
+  .top .menu-btn{display:inline-flex}
+  .top,.content{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .barrow{grid-template-columns:minmax(0,110px) minmax(0,1fr) auto}
+}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:25}
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
+.plan{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.plan.feat{border-color:var(--green);box-shadow:0 0 0 3px var(--green-soft)}
+.plan .amt{font-family:var(--f-mono);font-size:2.1rem;font-weight:500;letter-spacing:-.03em;line-height:1}
+.plan ul{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:.84rem}
+.plan li{display:grid;grid-template-columns:16px minmax(0,1fr);gap:8px;align-items:start}
+.plan li svg{margin-top:3px;color:var(--green)} .plan li.no{color:var(--fg-3)} .plan li.no svg{color:var(--fg-3)}
+.plan .btn{margin-top:auto}
+.lockbox{display:grid;justify-items:center;gap:10px;text-align:center;padding:36px 20px}
+.planbox{background:var(--navy-2);border-radius:9px;padding:10px;display:grid;gap:6px;opacity:1}
+.planbox b{font-size:.85rem}
+.planbox a{color:var(--green);text-decoration:none;font-weight:600}
+.checkout{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;align-items:start}
+.sumrow{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:.86rem}
+.sumrow:last-child{border-bottom:0}
+@media (max-width:900px){.plans,.checkout{grid-template-columns:minmax(0,1fr)}}
+</style>
+
+<div class="app">
+  <aside class="side" id="side">
+    <div class="brand"><span class="mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M2.5 12.5V9M6.5 12.5V5.5M10.5 12.5V7.5M14 12.5V3"/></svg></span><div><b>CallCenter Intelligence</b><span>Análisis de operarios</span></div></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-foot">
+      <div class="planbox" id="planBox"></div>
+      <p id="dataStatus">Sin datos importados</p>
+      <p>Tus archivos se procesan en este navegador. No se envían a ningún servidor.</p>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <button class="btn ghost menu-btn" id="menuBtn" aria-label="Abrir menú"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 5h12M3 9h12M3 13h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <div class="grow"></div>
+      <a class="btn primary" href="#importar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10.5V2.5M4.8 5.7 8 2.5l3.2 3.2M2.5 10.5v2.5a.5.5 0 0 0 .5.5h10a.5.5 0 0 0 .5-.5v-2.5"/></svg>Importar Excel</a>
+      <button class="btn ghost" id="themeBtn" aria-label="Cambiar entre modo claro y oscuro"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor"/></svg></button>
+    </header>
+    <main class="content" id="view"></main>
+  </div>
+</div>
+<div id="modalRoot"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+/* ============ Almacenamiento local (solo en este navegador) ============ */
+const LS={get(k,d){try{const v=localStorage.getItem("cci_"+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem("cci_"+k,JSON.stringify(v));return true}catch(e){return false}},del(k){try{localStorage.removeItem("cci_"+k)}catch(e){}}};
+let DB=LS.get("db",{records:[],imports:[],checks:[],currency:"S/"});
+const UI={f:{year:"",month:"",team:"",sup:"",agent:""},rankBy:"sales",rankDir:-1,teamSup:"",cmpA:"",cmpB:"",convBase:LS.get("convBase","ans"),theme:LS.get("theme",null),pending:null};
+if(UI.theme)document.documentElement.setAttribute("data-theme",UI.theme);
+/* ============ Planes ============
+   Pega aquí el enlace de pago de cada plan (Mercado Pago, Culqi u otra pasarela).
+   Mientras esté vacío, la página de pago indica que el pago en línea aún no está disponible. */
+const PAYMENT_LINKS={starter:"",pro:""};
+const PLANS={
+  free:{name:"Gratis",price:0,months:1,agents:30,tag:"Para conocer la herramienta"},
+  starter:{name:"Starter",price:99,months:6,agents:100,tag:"Para supervisores de un equipo"},
+  pro:{name:"Pro",price:199,months:24,agents:1000,tag:"Para la gerencia de la operación"}};
+const PLAN_FEATURES=[
+  ["Importar Excel con mapeo y validación",1,1,1],
+  ["Meses guardados",v=>v===0?"1 mes":v===1?"Hasta 6 meses":"Hasta 24 meses"],
+  ["Operarios por mes",v=>v===0?"Hasta 30":v===1?"Hasta 100":"Hasta 1.000"],
+  ["Dashboard con 10 indicadores y filtros",1,1,1],
+  ["Top 10 y 10 que necesitan apoyo",1,1,1],
+  ["Ranking completo y ficha individual de cada operario",0,1,1],
+  ["Análisis por equipos",0,1,1],
+  ["Comparación entre meses",0,1,1],
+  ["Copiar tablas a Excel",0,1,1],
+  ["Detalle de datos incompletos",0,1,1],
+  ["Controles entre hojas (resumen vs. detalle vs. diario)",0,0,1],
+  ["Ventas registradas vs. validadas por operario",0,0,1]];
+const LEVEL={free:0,starter:1,pro:2};
+let PLAN=LS.get("plan","free");if(!PLANS[PLAN])PLAN="free";
+const can=need=>LEVEL[PLAN]>=LEVEL[need];
+const FEAT={fullRanking:"starter",agentFile:"starter",teams:"starter",compare:"starter",copy:"starter",checkDetails:"starter",crossChecks:"pro"};
+const allow=f=>can(FEAT[f]);
+const soles=v=>"S/ "+v.toLocaleString("es-PE",{minimumFractionDigits:2,maximumFractionDigits:2});
+function lockPanel(need,title,text){const p=PLANS[need];return `<section class="panel lockbox"><span class="chip info">Disponible desde el plan ${p.name}</span><b style="font-size:1.05rem">${title}</b><span class="muted small" style="max-width:52ch">${text}</span><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><a class="btn primary" href="#pago-${need}">Comprar plan ${p.name} · S/ ${p.price}/mes</a><a class="btn" href="#planes">Comparar planes</a></div></section>`}
+function setPlan(k){PLAN=k;LS.set("plan",k);}
+function persist(){if(!LS.set("db",DB))toast("No se pudo guardar en el navegador; los datos se perderán al cerrar la página")}
+
+/* ============ Utilidades ============ */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9%/]+/g," ").trim();
+const MESES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const perLabel=p=>{if(!p)return"—";const[y,m]=p.split("-");return MESES[+m-1][0].toUpperCase()+MESES[+m-1].slice(1)+" "+y};
+const prevPer=p=>{let[y,m]=p.split("-").map(Number);m--;if(!m){m=12;y--}return y+"-"+String(m).padStart(2,"0")};
+const nf=(v,d=0)=>v==null||!isFinite(v)?"—":v.toLocaleString("es-PE",{minimumFractionDigits:d,maximumFractionDigits:d});
+const pctf=(v,d=1)=>v==null||!isFinite(v)?"—":nf(v,d)+"%";
+const money=v=>v==null||!isFinite(v)?"—":(DB.currency?DB.currency+" ":"")+nf(v,0);
+const mmss=min=>{if(min==null||!isFinite(min))return"—";const s=Math.round(min*60);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2600)}
+const sum=(a,f)=>a.reduce((s,x)=>{const v=f(x);return v==null||!isFinite(v)?s:s+v},0);
+const has=(a,k)=>a.some(r=>r[k]!=null);
+function toNum(v){if(v==null||v==="")return null;if(typeof v==="number")return isFinite(v)?v:NaN;if(v instanceof Date)return NaN;
+  let s=String(v).trim().replace(/[S\/$€\s]|soles/gi,"").replace(/%$/,"");if(s==="")return null;
+  if(/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s))s=s.replace(/\./g,"").replace(",",".");else if(/^-?\d+,\d+$/.test(s))s=s.replace(",",".");else s=s.replace(/,(?=\d{3}\b)/g,"");
+  const n=Number(s);return isFinite(n)?n:NaN}
+function toMinutes(v,unit){if(v==null||v==="")return null;
+  if(v instanceof Date)return v.getUTCHours()*60+v.getUTCMinutes()+v.getUTCSeconds()/60;
+  if(typeof v==="string"&&/^\d{1,2}:\d{2}(:\d{2})?$/.test(v.trim())){const p=v.trim().split(":").map(Number);return p.length===3?p[0]*60+p[1]+p[2]/60:p[0]+p[1]/60}
+  const n=toNum(v);if(n==null||isNaN(n))return n;
+  if(unit==="sec")return n/60;if(unit==="day")return n*1440;return n}
+function toPeriod(v){if(v==null||v==="")return null;
+  if(v instanceof Date&&!isNaN(v))return v.getUTCFullYear()+"-"+String(v.getUTCMonth()+1).padStart(2,"0");
+  if(typeof v==="number"&&v>20000&&v<80000){const d=new Date(Math.round((v-25569)*864e5));return toPeriod(d)}
+  const s=norm(v);let m=s.match(/(20\d{2})[ /-](\d{1,2})\b/);if(m)return m[1]+"-"+m[2].padStart(2,"0");
+  m=s.match(/\b(\d{1,2})[ /-](20\d{2})/);if(m&&+m[1]<=12)return m[2]+"-"+m[1].padStart(2,"0");
+  m=s.match(/\b\d{1,2}[ /-](\d{1,2})[ /-](20\d{2})/);if(m)return m[2]+"-"+m[1].padStart(2,"0");
+  const mi=MESES.findIndex(x=>s.includes(x)||s.includes(x.slice(0,3)+" ")||s.startsWith(x.slice(0,3)));let y=s.match(/20\d{2}/)||(s.match(/\b(\d{2})\b/)&&["20"+s.match(/\b(\d{2})\b/)[1]]);
+  if(mi>=0&&y)return y[0]+"-"+String(mi+1).padStart(2,"0");return null}
+
+/* ============ Diccionario de columnas ============ */
+// Campo canónico → sinónimos (normalizados). El más largo que coincida gana.
+const FIELDS=[
+ ["agentId","ID del operario",["id operario","id agente","codigo operario","cod operario","id asesor","codigo","id empleado","usuario","id"],"text"],
+ ["agent","Nombre del operario",["operario","nombre operario","agente","asesor","ejecutivo","colaborador","trabajador","empleado","operador","nombre"],"text"],
+ ["team","Equipo",["equipo","campana","grupo","celula","area","linea"],"text"],
+ ["sup","Supervisor",["supervisor","lider","jefe","coordinador","team leader"],"text"],
+ ["period","Mes / fecha",["mes","periodo","fecha","month","mes reporte"],"period"],
+ ["calls","Llamadas realizadas",["llamadas realizadas","llamadas","total llamadas","marcaciones","intentos","llamadas emitidas","llamadas totales"],"int"],
+ ["ans","Llamadas contestadas",["llamadas contestadas","contestadas","atendidas","llamadas atendidas","contactos","contactadas","llamadas efectivas"],"int"],
+ ["sales","Ventas registradas",["ventas cerradas","ventas","ventas realizadas","ventas registradas","ventas totales","ventas del dia"],"num"],
+ ["salesVal","Ventas validadas",["ventas validadas","validadas","ventas aprobadas","ventas confirmadas"],"num"],
+ ["goal","Meta de ventas",["meta ventas","meta","objetivo","cuota","meta mensual"],"num"],
+ ["revenue","Ingresos",["ingresos generados","ingresos","monto","facturacion","importe","revenue","ingresos generados s/"],"num"],
+ ["aht","Tiempo promedio de atención",["tiempo promedio atencion","tiempo promedio atencion min","tmo","aht","tiempo promedio","tiempo medio","tiempo atencion","tma"],"time"],
+ ["quality","Calidad",["calidad","calidad %","nota calidad","qa","puntaje calidad"],"pct"],
+ ["adherence","Adherencia",["adherencia","adherencia %","adherencia horario"],"pct"],
+ ["absences","Ausencias",["ausencias","faltas","inasistencias"],"num"],
+];
+const DERIVED=["cumplimiento","conversion","tasa"]; // columnas calculadas en el archivo: se recalculan
+const FMAP=Object.fromEntries(FIELDS.map(f=>[f[0],f]));
+function autoMap(headers){
+  const used=new Set(),map={};
+  const cands=[];
+  headers.forEach((h,ci)=>{const n=norm(h).replace(/ %$/,"").replace(/ s\/$/,"").replace(/ min$/,"").trim();if(!n)return;
+    if(DERIVED.some(d=>n.startsWith(d)))return;
+    FIELDS.forEach(([k,,syn])=>syn.forEach(s=>{let score=0;if(n===s)score=1000+s.length;else if((" "+n+" ").includes(" "+s+" "))score=s.length;if(score)cands.push({k,ci,score})}))});
+  cands.sort((a,b)=>b.score-a.score);
+  for(const c of cands){if(map[c.k]!=null||used.has(c.ci))continue;map[c.k]=c.ci;used.add(c.ci)}
+  return map;
+}
+
+/* ============ Lectura de libros ============ */
+function sheetTable(ws){
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true,blankrows:false});
+  let hi=0;for(let i=0;i<Math.min(12,rows.length);i++){const r=rows[i]||[];if(r.filter(c=>typeof c==="string"&&c.trim()).length>=3){hi=i;break}}
+  const headers=(rows[hi]||[]).map((h,i)=>h==null||h===""?"Columna "+(i+1):String(h).trim());
+  const data=rows.slice(hi+1).filter(r=>r&&r.some(c=>c!=null&&c!==""));
+  return{headers,data,headerRow:hi+1};
+}
+function classify(t){
+  const H=t.headers.map(norm);const hasH=re=>H.some(h=>re.test(h));
+  if(t.headers.length<=3&&hasH(/^campo$/)&&hasH(/descripcion/))return"ignore";
+  if(hasH(/estado/)&&hasH(/importe|monto|precio|valor/)&&hasH(/venta/))return"salesDetail";
+  const m=autoMap(t.headers);
+  const metrics=["calls","ans","sales","goal","revenue","aht","quality","adherence"].filter(k=>m[k]!=null).length;
+  if((m.agent!=null||m.agentId!=null)&&metrics>=2)return m.period!=null&&new Set(t.data.map(r=>r[m.agentId??m.agent])).size<t.data.length?"activity":"summary";
+  return"ignore";
+}
+function inferPeriods(wb,tables){
+  const found={};
+  tables.forEach(t=>{t.headers.forEach((h,ci)=>{if(/fecha|mes|periodo/.test(norm(h)))t.data.forEach(r=>{const p=toPeriod(r[ci]);if(p)found[p]=(found[p]||0)+1})})});
+  return Object.entries(found).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+}
+async function readFiles(files){
+  const out=[];
+  for(const file of files){
+    const ext=file.name.split(".").pop().toLowerCase();
+    if(!["xlsx","xls","csv"].includes(ext)){out.push({name:file.name,error:"Formato no admitido. Usa .xlsx, .xls o .csv."});continue}
+    if(file.size>25*1024*1024){out.push({name:file.name,error:"El archivo supera 25 MB."});continue}
+    try{
+      const buf=await file.arrayBuffer();
+      const wb=XLSX.read(buf,{type:"array",cellDates:true});
+      const tables=wb.SheetNames.map(n=>({name:n,...sheetTable(wb.Sheets[n])}));
+      tables.forEach(t=>t.role=classify(t));
+      // Si no hay hoja resumen, la de actividad diaria hace de principal (se agrega por mes)
+      if(!tables.some(t=>t.role==="summary")){const a=tables.find(t=>t.role==="activity");if(a)a.role="summary"}
+      else{let first=true;tables.forEach(t=>{if(t.role==="summary"){if(!first)t.role="ignore";first=false}})}
+      const main=tables.find(t=>t.role==="summary");
+      const periods=inferPeriods(wb,tables);
+      const fromName=toPeriod(file.name.replace(/[_.]/g," "));
+      out.push({name:file.name,size:file.size,tables,mainIdx:main?tables.indexOf(main):0,map:main?autoMap(main.headers):{},
+        period:periods[0]||fromName||"",periodHint:periods.length?"Detectado en las fechas del archivo":fromName?"Detectado en el nombre del archivo":"",ahtUnit:"auto"});
+    }catch(e){out.push({name:file.name,error:"No se pudo leer el archivo. ¿Está protegido con contraseña o dañado?"})}
+  }
+  return out;
+}
+
+/* ============ Normalización + validación ============ */
+function detectAhtUnit(header,vals){const h=norm(header);if(/seg|sec|\bs\b/.test(h))return"sec";if(/min/.test(h))return"min";
+  const nums=vals.filter(v=>typeof v==="number");if(nums.length&&nums.every(v=>v<1))return"day";const med=nums.sort((a,b)=>a-b)[Math.floor(nums.length/2)];return med>30?"sec":"min"}
+function buildFile(F){
+  const t=F.tables[F.mainIdx],m=F.map,issues=[],rows=[];
+  const col=k=>m[k]==null?null:m[k];
+  const unit=F.ahtUnit!=="auto"?F.ahtUnit:(col("aht")!=null?detectAhtUnit(t.headers[col("aht")],t.data.map(r=>r[col("aht")])):"min");
+  const pctScale={};["quality","adherence"].forEach(k=>{if(col(k)==null)return;const v=t.data.map(r=>toNum(r[col(k)])).filter(x=>x!=null&&!isNaN(x));pctScale[k]=v.length&&v.every(x=>x<=1)?100:1});
+  const add=(lvl,msg,row)=>issues.push({lvl,msg,row});
+  if(col("agent")==null&&col("agentId")==null)add("err","Falta la columna del operario (nombre o ID). Asígnala en el mapeo.");
+  if(col("period")==null&&!F.period)add("err","Indica a qué mes corresponden los datos.");
+  t.data.forEach((r,i)=>{
+    const rn=i+t.headerRow+1, g=k=>col(k)==null?null:r[col(k)];
+    const rec={row:rn};
+    rec.agentId=g("agentId")!=null?String(g("agentId")).trim():null;
+    rec.agent=g("agent")!=null?String(g("agent")).trim():(rec.agentId);
+    if(!rec.agent&&!rec.agentId){add("warn","Fila sin operario: se omite",rn);return}
+    rec.team=g("team")!=null?String(g("team")).trim():"Sin equipo";
+    rec.sup=g("sup")!=null?String(g("sup")).trim():"Sin supervisor";
+    rec.period=col("period")!=null?toPeriod(g("period")):F.period;
+    if(!rec.period){add("err",`Fecha o mes no reconocido: “${esc(g("period"))}”`,rn);return}
+    for(const k of ["calls","ans","sales","salesVal","goal","revenue","absences"]){const v=toNum(g(k));if(Number.isNaN(v)){add("warn",`${FMAP[k][1]}: “${esc(g(k))}” no es un número; se deja vacío`,rn);rec[k]=null}else rec[k]=v;if(rec[k]!=null&&rec[k]<0){add("warn",`${FMAP[k][1]} negativo (${rec[k]})`,rn)}}
+    const a=toMinutes(g("aht"),unit);rec.aht=Number.isNaN(a)?null:a;if(Number.isNaN(a))add("warn",`Tiempo de atención “${esc(g("aht"))}” no reconocido`,rn);
+    for(const k of ["quality","adherence"]){const v=toNum(g(k));rec[k]=v==null||Number.isNaN(v)?null:v*(pctScale[k]||1);if(Number.isNaN(v))add("warn",`${FMAP[k][1]}: “${esc(g(k))}” no es un número`,rn);if(rec[k]!=null&&rec[k]>100)add("warn",`${FMAP[k][1]} mayor que 100 (${rec[k]})`,rn)}
+    if(rec.calls!=null&&rec.ans!=null&&rec.ans>rec.calls)add("warn",`Contestadas (${rec.ans}) mayores que realizadas (${rec.calls})`,rn);
+    if(rec.ans!=null&&rec.sales!=null&&rec.sales>rec.ans)add("warn",`Ventas (${rec.sales}) mayores que llamadas contestadas (${rec.ans})`,rn);
+    ["calls","ans","sales","goal","revenue","aht","quality","adherence"].forEach(k=>{if(col(k)!=null&&rec[k]==null&&(g(k)==null||g(k)===""))add("info",`${FMAP[k][1]} vacío`,rn)});
+    rec.key=(rec.agentId||norm(rec.agent));
+    rows.push(rec);
+  });
+  // duplicados exactos y agregación por operario+mes
+  const seen=new Map(),agg=new Map();let dupExact=0,merged=0;
+  rows.forEach(r=>{const sig=JSON.stringify({...r,row:0});if(seen.has(sig)){dupExact++;add("warn",`Fila duplicada idéntica a la fila ${seen.get(sig)}: se excluye`,r.row);return}seen.set(sig,r.row);
+    const k=r.key+"|"+r.period;if(!agg.has(k)){agg.set(k,{...r,_n:1,_ahtW:r.aht!=null&&r.ans!=null?r.aht*r.ans:null,_q:[r.quality],_a:[r.adherence]})}else{merged++;const x=agg.get(k);x._n++;
+      ["calls","ans","sales","salesVal","goal","revenue","absences"].forEach(f=>{if(r[f]!=null)x[f]=(x[f]||0)+r[f]});
+      if(r.aht!=null&&r.ans!=null)x._ahtW=(x._ahtW||0)+r.aht*r.ans;x._q.push(r.quality);x._a.push(r.adherence)}});
+  const records=[...agg.values()].map(x=>{const r={...x};if(x._n>1){if(x._ahtW!=null&&x.ans)r.aht=x._ahtW/x.ans;const q=x._q.filter(v=>v!=null),a=x._a.filter(v=>v!=null);r.quality=q.length?q.reduce((s,v)=>s+v,0)/q.length:null;r.adherence=a.length?a.reduce((s,v)=>s+v,0)/a.length:null}
+    delete r._n;delete r._ahtW;delete r._q;delete r._a;delete r.row;r.src=F.name;return r});
+  if(merged)add("info",`${merged} filas se sumaron por operario y mes (datos diarios o repetidos con valores distintos).`);
+  // Hojas secundarias: detalle de ventas y actividad diaria → controles cruzados
+  const extra=crossChecks(F,records);
+  return{records,issues,unit,pctScale,extra,dupExact};
+}
+function findCol(headers,res){const H=headers.map(norm);for(const re of res){const i=H.findIndex(h=>re.test(h));if(i>=0)return i}return null}
+function crossChecks(F,records){
+  const checks=[],byKey=new Map(records.map(r=>[r.key+"|"+r.period,r]));
+  const nameToKey=new Map(records.map(r=>[norm(r.agent),r.key]));
+  F.tables.forEach((t,ti)=>{
+    if(ti===F.mainIdx)return;
+    if(t.role==="salesDetail"){
+      const ci={id:findCol(t.headers,[/^id operario$/,/id (agente|asesor|operario)/,/codigo/]),name:findCol(t.headers,[/^operario$/,/agente|asesor|nombre/]),st:findCol(t.headers,[/^estado$/,/estado/]),amt:findCol(t.headers,[/importe|monto|precio|valor/]),date:findCol(t.headers,[/fecha/,/mes|periodo/])};
+      if(ci.st==null||(ci.id==null&&ci.name==null)){checks.push({lvl:"info",title:`Hoja “${t.name}”: no se pudo relacionar con los operarios`,detail:"Faltan columnas de estado u operario."});return}
+      const agg=new Map();let unk=0;
+      t.data.forEach(r=>{const key=ci.id!=null&&r[ci.id]!=null?String(r[ci.id]).trim():nameToKey.get(norm(r[ci.name]));const per=ci.date!=null?toPeriod(r[ci.date]):F.period;if(!key||!byKey.has(key+"|"+per)){unk++;return}
+        const st=norm(r[ci.st]),amt=ci.amt!=null?toNum(r[ci.amt])||0:0,x=agg.get(key+"|"+per)||{tot:0,val:0,pen:0,anu:0,amt:0,amtVal:0};
+        x.tot++;x.amt+=amt;if(/valid|aprob|confirm|activ/.test(st)){x.val++;x.amtVal+=amt}else if(/anul|cancel|rechaz|baja/.test(st))x.anu++;else x.pen++;agg.set(key+"|"+per,x)});
+      let difSales=[],difRev=[];
+      agg.forEach((x,k)=>{const r=byKey.get(k);r.salesVal=x.val;r.salesPend=x.pen;r.salesAnul=x.anu;r.revVal=+x.amtVal.toFixed(2);r.revDetail=+x.amt.toFixed(2);
+        if(r.sales!=null&&r.sales!==x.tot)difSales.push(`${r.agent}: resumen ${nf(r.sales)} · detalle ${nf(x.tot)}`);
+        if(r.revenue!=null&&Math.abs(r.revenue-x.amt)>0.5)difRev.push(`${r.agent}: resumen ${money(r.revenue)} · suma del detalle ${money(x.amt)}`)});
+      const T=[...agg.values()].reduce((s,x)=>({tot:s.tot+x.tot,val:s.val+x.val,pen:s.pen+x.pen,anu:s.anu+x.anu}),{tot:0,val:0,pen:0,anu:0});
+      checks.push({lvl:"info",title:`Detalle de ventas leído: ${nf(T.tot)} ventas (${nf(T.val)} validadas, ${nf(T.pen)} pendientes, ${nf(T.anu)} anuladas)`,detail:`Hoja “${t.name}”. Las ventas validadas y sus importes se muestran aparte de las registradas.`});
+      if(difSales.length)checks.push({lvl:"warn",title:`${difSales.length} operarios con ventas distintas entre el resumen y el detalle`,detail:"Se usa la cifra del resumen como ventas registradas.",list:difSales});
+      else checks.push({lvl:"ok",title:"Las ventas del resumen coinciden con el número de ventas del detalle",detail:`Comprobado en ${agg.size} operarios.`});
+      if(difRev.length)checks.push({lvl:"warn",title:`${difRev.length} operarios con ingresos del resumen distintos a la suma de importes del detalle`,detail:"Se muestran los ingresos del resumen como “Ingresos” y los del detalle validado como “Ingresos validados”. Conviene revisar cuál es la fuente oficial.",list:difRev});
+      if(unk)checks.push({lvl:"warn",title:`${unk} ventas del detalle no se pudieron asociar a un operario del resumen`,detail:`Hoja “${t.name}”.`});
+    }
+    if(t.role==="activity"){
+      const m=autoMap(t.headers);const ci={id:m.agentId,name:m.agent,date:m.period,calls:m.calls,ans:m.ans,sales:m.sales};
+      const minCol=findCol(t.headers,[/minutos en llamada|minutos|tiempo en llamada|talk/]);
+      if((ci.id==null&&ci.name==null)||ci.date==null)return;
+      const agg=new Map();
+      t.data.forEach(r=>{const key=ci.id!=null&&r[ci.id]!=null?String(r[ci.id]).trim():nameToKey.get(norm(r[ci.name]));const per=toPeriod(r[ci.date]);if(!key||!per)return;
+        const x=agg.get(key+"|"+per)||{calls:0,ans:0,sales:0,min:0,days:0};x.days++;x.calls+=toNum(r[ci.calls])||0;x.ans+=toNum(r[ci.ans])||0;x.sales+=toNum(r[ci.sales])||0;if(minCol!=null)x.min+=toNum(r[minCol])||0;agg.set(key+"|"+per,x)});
+      const dif={calls:[],ans:[],sales:[],aht:[]};
+      agg.forEach((x,k)=>{const r=byKey.get(k);if(!r)return;r.days=x.days;
+        if(ci.calls!=null&&r.calls!=null&&r.calls!==x.calls)dif.calls.push(`${r.agent}: resumen ${nf(r.calls)} · diario ${nf(x.calls)}`);
+        if(ci.ans!=null&&r.ans!=null&&r.ans!==x.ans)dif.ans.push(`${r.agent}: resumen ${nf(r.ans)} · diario ${nf(x.ans)}`);
+        if(ci.sales!=null&&r.sales!=null&&r.sales!==x.sales)dif.sales.push(`${r.agent}: resumen ${nf(r.sales)} · diario ${nf(x.sales)}`);
+        if(minCol!=null&&x.ans&&r.aht!=null&&Math.abs(r.aht-x.min/x.ans)>0.1)dif.aht.push(`${r.agent}: resumen ${mmss(r.aht)} · diario ${mmss(x.min/x.ans)}`)});
+      const lab={calls:"llamadas realizadas",ans:"llamadas contestadas",sales:"ventas",aht:"tiempo promedio de atención"};
+      const bad=Object.entries(dif).filter(([,v])=>v.length);
+      if(bad.length)bad.forEach(([k,v])=>checks.push({lvl:"warn",title:`${v.length} de ${agg.size} operarios: ${lab[k]} del resumen no coinciden con la suma de “${t.name}”`,detail:"Puede deberse a días que faltan en la hoja diaria o a criterios de cálculo distintos. El dashboard usa el resumen.",list:v}));
+      else if(agg.size)checks.push({lvl:"ok",title:`La actividad diaria cuadra con el resumen`,detail:`Hoja “${t.name}”, ${agg.size} operarios.`});
+    }
+  });
+  return checks;
+}
+
+/* ============ Motor de KPI ============ */
+function kpis(R){
+  if(!R.length)return null;
+  const wGoal=R.filter(r=>r.goal!=null&&r.sales!=null),wAns=R.filter(r=>r.ans!=null&&r.sales!=null),wCalls=R.filter(r=>r.calls!=null&&r.sales!=null),wAht=R.filter(r=>r.aht!=null&&r.ans!=null&&r.ans>0);
+  const q=R.filter(r=>r.quality!=null),a=R.filter(r=>r.adherence!=null);
+  const convBase=UI.convBase==="calls"?wCalls:wAns, convDen=UI.convBase==="calls"?sum(wCalls,r=>r.calls):sum(wAns,r=>r.ans);
+  return{
+    ops:new Set(R.map(r=>r.key)).size,
+    calls:has(R,"calls")?sum(R,r=>r.calls):null, ans:has(R,"ans")?sum(R,r=>r.ans):null,
+    sales:has(R,"sales")?sum(R,r=>r.sales):null, salesVal:has(R,"salesVal")?sum(R,r=>r.salesVal):null,
+    revenue:has(R,"revenue")?sum(R,r=>r.revenue):null, revVal:has(R,"revVal")?sum(R,r=>r.revVal):null,
+    goal:wGoal.length?sum(wGoal,r=>r.goal):null,
+    goalPct:wGoal.length&&sum(wGoal,r=>r.goal)?sum(wGoal,r=>r.sales)/sum(wGoal,r=>r.goal)*100:null,
+    reached:wGoal.length?wGoal.filter(r=>r.goal&&r.sales>=r.goal).length/wGoal.length*100:null,
+    conv:convBase.length&&convDen?sum(convBase,r=>r.sales)/convDen*100:null,
+    contact:R.some(r=>r.calls)&&has(R,"ans")?sum(R.filter(r=>r.calls!=null&&r.ans!=null),r=>r.ans)/sum(R.filter(r=>r.calls!=null&&r.ans!=null),r=>r.calls)*100:null,
+    aht:wAht.length?sum(wAht,r=>r.aht*r.ans)/sum(wAht,r=>r.ans):(has(R,"aht")?sum(R,r=>r.aht)/R.filter(r=>r.aht!=null).length:null),
+    quality:q.length?sum(q,r=>r.quality)/q.length:null,
+    adherence:a.length?sum(a,r=>r.adherence)/a.length:null,
+    salesPerOp:has(R,"sales")?sum(R,r=>r.sales)/new Set(R.map(r=>r.key)).size:null,
+  };
+}
+function agentRow(r){return{...r,goalPct:r.goal?r.sales/r.goal*100:null,conv:UI.convBase==="calls"?(r.calls?r.sales/r.calls*100:null):(r.ans?r.sales/r.ans*100:null),valRate:r.salesVal!=null&&r.sales?r.salesVal/r.sales*100:null}}
+// dirección: 1 = más es mejor, -1 = menos es mejor
+const KDEF=[
+ ["ops","Operarios",v=>nf(v),0,"n","p"],["calls","Llamadas realizadas",v=>nf(v),0,"n","p"],["ans","Llamadas contestadas",v=>nf(v),1,"n","p"],
+ ["sales","Ventas registradas",v=>nf(v),1,"n","p"],["revenue","Ingresos",v=>money(v),1,"n","p"],["goalPct","Cumplimiento de metas",v=>pctf(v),1,"pp","p"],
+ ["conv","Tasa de conversión",v=>pctf(v,2),1,"pp","p"],["aht","Tiempo prom. de atención",v=>mmss(v),-1,"n","q"],["quality","Calidad promedio",v=>pctf(v),1,"pp","q"],["adherence","Adherencia promedio",v=>pctf(v),1,"pp","q"]];
+function deltaHTML(cur,prev,dir,kind){
+  if(cur==null||prev==null)return null;
+  const d=cur-prev;const good=dir===0?null:(d*dir>0);const cls=Math.abs(d)<1e-9||dir===0?"flat":good?"good":"bad";const arrow=d>0?"▲":d<0?"▼":"■";
+  if(kind==="pp")return `<span class="delta ${cls}">${arrow} ${nf(Math.abs(d),1)} pp</span>`;
+  const p=prev?d/prev*100:null;
+  return `<span class="delta ${cls}">${arrow} ${p==null?"—":nf(Math.abs(p),1)+"%"}</span>`;
+}
+
+/* ============ Filtros ============ */
+const periods=()=>[...new Set(DB.records.map(r=>r.period))].sort();
+function curPeriod(){const P=periods();if(!P.length)return null;const y=UI.f.year||P[P.length-1].slice(0,4);const ms=P.filter(p=>p.startsWith(y));const m=UI.f.month&&ms.includes(y+"-"+UI.f.month)?UI.f.month:ms[ms.length-1].slice(5);return y+"-"+m}
+function applyF(R,opt={}){return R.filter(r=>(!UI.f.team||r.team===UI.f.team)&&(!UI.f.sup||r.sup===UI.f.sup)&&(opt.noAgent||!UI.f.agent||r.key===UI.f.agent))}
+function filtersHTML(withAgent=true){
+  const P=periods(),cp=curPeriod(),years=[...new Set(P.map(p=>p.slice(0,4)))],y=cp.slice(0,4);
+  const opt=(arr,sel,all)=>(all?`<option value="">${all}</option>`:"")+arr.map(([v,l])=>`<option value="${esc(v)}" ${v===sel?"selected":""}>${esc(l)}</option>`).join("");
+  const teams=[...new Set(DB.records.map(r=>r.team))].sort(),sups=[...new Set(DB.records.map(r=>r.sup))].sort();
+  const agents=[...new Map(DB.records.filter(r=>(!UI.f.team||r.team===UI.f.team)&&(!UI.f.sup||r.sup===UI.f.sup)).map(r=>[r.key,r.agent])).entries()].sort((a,b)=>a[1].localeCompare(b[1]));
+  return `<div class="filters">
+    <div class="field"><label for="fy">Año</label><select class="input" id="fy">${opt(years.map(v=>[v,v]),y)}</select></div>
+    <div class="field"><label for="fm">Mes</label><select class="input" id="fm">${opt(P.filter(p=>p.startsWith(y)).map(p=>[p.slice(5),MESES[+p.slice(5)-1]]),cp.slice(5))}</select></div>
+    <div class="field"><label for="ft">Equipo</label><select class="input" id="ft">${opt(teams.map(v=>[v,v]),UI.f.team,"Todos")}</select></div>
+    <div class="field"><label for="fs">Supervisor</label><select class="input" id="fs">${opt(sups.map(v=>[v,v]),UI.f.sup,"Todos")}</select></div>
+    ${withAgent?`<div class="field"><label for="fa">Operario</label><select class="input" id="fa">${opt(agents,UI.f.agent,"Todos")}</select></div>`:""}
+  </div>`;
+}
+function bindFilters(){
+  const b=(id,k,reset)=>{const el=$("#"+id);if(el)el.onchange=()=>{UI.f[k]=el.value;if(reset)reset.forEach(x=>UI.f[x]="");render()}};
+  b("fy","year",["month"]);b("fm","month");b("ft","team",["agent"]);b("fs","sup",["agent"]);b("fa","agent");
+}
+
+/* ============ Gráficos SVG ============ */
+function barChartV(items,{h=200,fmt=v=>nf(v),color="var(--green)"}={}){ // items:[{label,value}]
+  const W=560,L=8,R=8,T=18,B=30,iw=W-L-R,ih=h-T-B,max=Math.max(...items.map(i=>i.value||0),1),bw=Math.min(64,iw/items.length*.6),step=iw/items.length;
+  return `<svg class="chart" viewBox="0 0 ${W} ${h}" role="img"><line x1="${L}" x2="${W-R}" y1="${T+ih}" y2="${T+ih}" stroke="var(--line)"/>${items.map((it,i)=>{const bh=(it.value||0)/max*ih,x=L+step*i+(step-bw)/2;return `<rect x="${x}" y="${T+ih-bh}" width="${bw}" height="${bh}" rx="4" fill="${it.color||color}"/><text x="${x+bw/2}" y="${T+ih-bh-5}" text-anchor="middle" style="fill:var(--fg)">${fmt(it.value)}</text><text x="${x+bw/2}" y="${h-10}" text-anchor="middle">${esc(it.label.length>16?it.label.slice(0,15)+"…":it.label)}</text>`}).join("")}</svg>`;
+}
+function lineChart(series,labels,{h=200,fmt=v=>nf(v),yMin0=true}={}){ // series:[{name,data,color}]
+  const W=560,L=44,R=14,T=14,B=28,iw=W-L-R,ih=h-T-B;const all=series.flatMap(s=>s.data.filter(v=>v!=null));if(!all.length)return"";
+  let mn=yMin0?0:Math.min(...all)*.95,mx=Math.max(...all)*1.08;if(mx===mn)mx=mn+1;
+  const x=i=>L+(labels.length===1?iw/2:i/(labels.length-1)*iw),y=v=>T+ih-(v-mn)/(mx-mn)*ih;
+  let g="";for(let k=0;k<=3;k++){const v=mn+(mx-mn)*k/3;g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+3}" text-anchor="end">${fmt(v)}</text>`}
+  labels.forEach((l,i)=>g+=`<text x="${x(i)}" y="${h-8}" text-anchor="middle">${esc(l)}</text>`);
+  series.forEach(s=>{const pts=s.data.map((v,i)=>v==null?null:[x(i),y(v)]);const d=pts.filter(Boolean).map((p,k)=>(k?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+    g+=`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2"/>`+pts.filter(Boolean).map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${s.color}"/>`).join("")});
+  return `<svg class="chart" viewBox="0 0 ${W} ${h}" role="img">${g}</svg>`;
+}
+function hbars(items,{fmt=v=>nf(v),cls="",max}={}){max=max??Math.max(...items.map(i=>i.value||0),1);
+  return `<div class="bars">${items.map(it=>`<div class="barrow"><span class="nm" title="${esc(it.label)}">${it.click?`<a href="#" data-agent="${esc(it.click)}" style="color:inherit">${esc(it.label)}</a>`:esc(it.label)}</span><div class="track ${it.cls||cls}"><span style="width:${Math.max(1,(it.value||0)/max*100)}%"></span></div><span class="num small">${fmt(it.value)}</span></div>`).join("")}</div>`}
+const shortPer=p=>MESES[+p.slice(5)-1].slice(0,3)+" "+p.slice(2,4);
+
+/* ============ Navegación ============ */
+const NAV=[["importar","Importar datos","M8 10.5V2.5M4.8 5.7 8 2.5l3.2 3.2M2.5 10.5v2.5a.5.5 0 0 0 .5.5h10a.5.5 0 0 0 .5-.5v-2.5"],["dashboard","Dashboard","M2.5 2.5h4.5v5h-4.5zM9 2.5h4.5v3H9zM9 7.5h4.5v6H9zM2.5 9.5h4.5v4h-4.5z"],["ranking","Ranking de operarios","M5 2.5h6v4a3 3 0 0 1-6 0zM8 9.5v3M5.5 13.5h5"],["equipos","Análisis por equipos","M5.5 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM11 7a1.7 1.7 0 1 0 0-3.4A1.7 1.7 0 0 0 11 7zM1.8 13.5a3.7 3.7 0 0 1 7.4 0M9.6 13.5a3 3 0 0 1 5-2.2"],["comparar","Comparar meses","M5 2.5v11M11 2.5v11M2.5 5.5h5M8.5 10.5h5"],["revision","Revisión de datos","M8 2 3 4v4c0 3 2.2 5 5 6 2.8-1 5-3 5-6V4z"],["planes","Planes y precios","M2.5 2.5h5l6 6-5 5-6-6zM5.5 5.5h.01"]];
+function renderNav(cur){
+  const warn=DB.checks.filter(c=>c.lvl==="warn"||c.lvl==="err").length;
+  $("#nav").innerHTML=NAV.map(([id,l,d])=>`<a href="#${id}" class="${cur===id?"on":""}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>${l}${(id==="equipos"||id==="comparar")&&!can("starter")?`<span class="badge" style="background:var(--navy-fg)">Starter</span>`:""}${id==="revision"&&warn?`<span class="badge">${warn}</span>`:""}</a>`).join("");
+  $("#planBox").innerHTML=`<span style="font-size:.7rem;opacity:.7">Tu plan</span><b>${PLANS[PLAN].name}${PLAN!=="free"?` · S/ ${PLANS[PLAN].price}/mes`:""}</b><span style="font-size:.72rem;opacity:.75">${PLANS[PLAN].months===1?"1 mes":PLANS[PLAN].months+" meses"} · hasta ${nf(PLANS[PLAN].agents)} operarios</span>${PLAN!=="pro"?`<a href="#planes">Mejorar plan →</a>`:""}`;
+  const P=periods();$("#dataStatus").textContent=DB.records.length?`${new Set(DB.records.map(r=>r.key)).size} operarios · ${P.length} ${P.length===1?"mes":"meses"} (${P.map(shortPer).join(", ")})`:"Sin datos importados";
+}
+function render(){
+  let h=(location.hash||"").slice(1)||(DB.records.length?"dashboard":"importar");
+  let[r,arg]=h.split("-");
+  if(!V[r])r="dashboard";
+  renderNav(r);
+  const noData=!["importar","planes","pago"].includes(r)&&!DB.records.length;
+  const v=$("#view");v.innerHTML=noData?emptyState():V[r](arg);v.classList.remove("fade");void v.offsetWidth;v.classList.add("fade");
+  if(noData)return;
+  bindFilters();if(V[r].after)V[r].after(arg);
+  $$("[data-agent]").forEach(a=>a.onclick=e=>{e.preventDefault();agentModal(a.dataset.agent)});
+  $$("[data-copy]").forEach(b=>b.onclick=()=>copyTable(b.dataset.copy));
+  $("#side").classList.remove("open");const s=$(".scrim");if(s)s.remove();
+}
+function emptyState(){return `<section class="panel empty"><b>Todavía no hay datos</b><span>Importa uno o varios archivos Excel para ver indicadores, rankings y comparaciones.</span><a class="btn primary" href="#importar">Importar Excel</a></section>`}
+const V={};
+
+/* ============ Vista: Importar ============ */
+V.importar=function(){
+  const P=UI.pending;
+  const step=!P?1:2;
+  return `<div class="page-h"><div><span class="eyebrow">Importar datos</span><h1>Carga tus reportes de Excel</h1><p class="muted">Formatos .xlsx, .xls o .csv. Puedes subir varios archivos y meses a la vez. Los datos se leen y validan aquí, en tu navegador.</p></div>
+  <div class="steps"><span class="${step===1?"on":"done"}">1 · Adjuntar</span><span class="${step===2?"on":""}">2 · Revisar columnas</span><span>3 · Confirmar</span></div></div>
+  ${!P?`<label class="drop" id="drop" for="fileIn">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4h12l8 8v22a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M24 4v8h8M15 20l10 10M25 20 15 30"/></svg>
+      <b style="font-size:1.02rem">Arrastra tus archivos aquí o haz clic para elegirlos</b>
+      <span class="muted small">Detectamos automáticamente las hojas, los encabezados y las columnas</span>
+      <span class="btn primary">Elegir archivos</span>
+      <input type="file" id="fileIn" accept=".xlsx,.xls,.csv" multiple hidden>
+    </label>
+    ${DB.imports.length?`<section class="panel"><div class="panel-h"><h2>Importaciones anteriores</h2><span class="faint small">Guardadas en este navegador</span></div><div class="tbl-wrap"><table><thead><tr><th>Archivo</th><th>Mes</th><th class="n">Operarios</th><th>Fecha de carga</th></tr></thead><tbody>${DB.imports.map(i=>`<tr><td>${esc(i.name)}</td><td>${i.periods.map(perLabel).join(", ")}</td><td class="n">${i.agents}</td><td class="faint">${new Date(i.at).toLocaleString("es-PE")}</td></tr>`).join("")}</tbody></table></div></section>`:""}
+    <section class="panel"><div class="panel-b small" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><span>Tu plan <b>${PLANS[PLAN].name}</b> guarda ${PLANS[PLAN].months===1?"1 mes":"hasta "+PLANS[PLAN].months+" meses"} y hasta ${nf(PLANS[PLAN].agents)} operarios por mes. Ahora tienes ${periods().length} ${periods().length===1?"mes":"meses"} guardados.</span>${PLAN!=="pro"?`<a class="btn sm" href="#planes">Ver planes</a>`:""}</div></section>
+    <section class="panel"><div class="panel-b small muted" style="display:grid;gap:6px"><b style="color:var(--fg)">¿Qué columnas necesita?</b><span>Imprescindible: el operario (nombre o ID). Recomendadas: equipo, supervisor, mes, llamadas realizadas y contestadas, ventas, meta, ingresos, tiempo promedio de atención, calidad y adherencia. Los nombres pueden variar: “Asesor”, “Agente” u “Operario” se reconocen igual.</span></div></section>`
+  :P.map((F,fi)=>F.error?`<section class="panel"><div class="panel-b"><span class="chip err">Error</span> <b>${esc(F.name)}</b><p class="muted small" style="margin-top:6px">${esc(F.error)}</p></div></section>`:fileReview(F,fi)).join("")+
+   `<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap"><button class="btn" id="cancelImp">Cancelar</button><button class="btn primary" id="confirmImp">Confirmar e importar</button></div>`}`;
+};
+function fileReview(F,fi){
+  const t=F.tables[F.mainIdx],B=buildFile(F);F._built=B;
+  const errs=B.issues.filter(i=>i.lvl==="err"),warns=B.issues.filter(i=>i.lvl==="warn"),infos=B.issues.filter(i=>i.lvl==="info");
+  const P=[...new Set(B.records.map(r=>r.period))];const existing=P.filter(p=>DB.records.some(r=>r.period===p));
+  const roleName={summary:"Datos principales",salesDetail:"Detalle de ventas (control)",activity:"Actividad diaria (control)",ignore:"No se usa"};
+  const colOpts=sel=>`<option value="">— No disponible —</option>`+t.headers.map((h,i)=>`<option value="${i}" ${sel===i?"selected":""}>${esc(h)}</option>`).join("");
+  const sample=ci=>ci==null?"":t.data.slice(0,3).map(r=>r[ci] instanceof Date?r[ci].toISOString().slice(0,10):r[ci]).filter(v=>v!=null).map(v=>esc(String(v).slice(0,18))).join(" · ");
+  const ignored=t.headers.filter((h,i)=>!Object.values(F.map).includes(i));
+  return `<section class="panel" data-file="${fi}">
+   <div class="panel-h"><div><h2>${esc(F.name)}</h2><p class="faint small">${F.tables.length} hojas · ${(F.size/1024).toFixed(0)} KB</p></div>
+     <div style="display:flex;gap:6px;flex-wrap:wrap">${errs.length?`<span class="chip err">${errs.length} errores</span>`:`<span class="chip ok">Listo para importar</span>`}${warns.length?`<span class="chip warn">${warns.length} advertencias</span>`:""}</div></div>
+   <div class="panel-b" style="display:grid;gap:18px">
+    <div class="grid g2">
+     <div style="display:grid;gap:8px"><span class="eyebrow">Hojas encontradas</span>
+      ${F.tables.map((s,si)=>`<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:.84rem;flex-wrap:wrap"><span><b style="font-weight:500">${esc(s.name)}</b> <span class="faint">· ${s.data.length} filas</span></span>${si===F.mainIdx?`<span class="chip ok">${roleName.summary}</span>`:`<span class="chip ${s.role==="ignore"?"":"info"}">${roleName[s.role]}</span>`}</div>`).join("")}
+      <div class="field" style="margin-top:4px"><label for="main${fi}">Hoja con los datos por operario</label><select class="input" id="main${fi}" data-main="${fi}">${F.tables.map((s,si)=>`<option value="${si}" ${si===F.mainIdx?"selected":""}>${esc(s.name)}</option>`).join("")}</select></div>
+     </div>
+     <div style="display:grid;gap:8px;align-content:start"><span class="eyebrow">Mes de los datos</span>
+      ${F.map.period!=null?`<p class="small">Se toma de la columna <b>${esc(t.headers[F.map.period])}</b>: ${P.map(perLabel).join(", ")||"—"}</p>`:
+      `<div class="field"><label for="per${fi}">¿A qué mes corresponde este archivo?</label><input class="input" type="month" id="per${fi}" data-per="${fi}" value="${F.period}" required>${F.periodHint?`<span class="faint small">${F.periodHint}</span>`:""}</div>`}
+      ${existing.length?`<p class="small" style="color:var(--amber)">Ya hay datos de ${existing.map(perLabel).join(", ")}. Al confirmar se <b>reemplazarán</b> los operarios de este archivo en ese mes.</p>`:""}
+     </div>
+    </div>
+    <div><span class="eyebrow">Correspondencia de columnas</span><p class="faint small" style="margin:2px 0 8px">Revisa las sugerencias. Cambia cualquier campo si no es correcto.</p>
+     <div class="tbl-wrap"><table><thead><tr><th>Dato</th><th>Columna de tu archivo</th><th>Ejemplos</th></tr></thead><tbody>
+     ${FIELDS.map(([k,l])=>`<tr><td>${l}${k==="agent"||k==="agentId"?' <span class="faint small">(uno de los dos)</span>':""}</td><td><select class="input" data-map="${fi}|${k}" aria-label="Columna para ${l}" style="max-width:240px">${colOpts(F.map[k])}</select>${k==="aht"&&F.map.aht!=null?` <select class="input" data-unit="${fi}" aria-label="Unidad del tiempo" style="width:auto">${[["auto","Unidad: auto ("+({min:"minutos",sec:"segundos",day:"hora Excel"}[B.unit])+")"],["min","Minutos"],["sec","Segundos"],["day","Formato hora Excel"]].map(([v,l2])=>`<option value="${v}" ${F.ahtUnit===v?"selected":""}>${l2}</option>`).join("")}</select>`:""}</td><td class="faint small">${sample(F.map[k])}</td></tr>`).join("")}
+     </tbody></table></div>
+     ${ignored.length?`<p class="faint small" style="margin-top:8px">Columnas no usadas: ${ignored.map(esc).join(", ")}. Los porcentajes ya calculados en el archivo (cumplimiento, conversión) se recalculan aquí a partir de los datos base.</p>`:""}
+    </div>
+    <div class="grid g3">
+     <div class="panel" style="padding:12px 14px"><span class="eyebrow">Registros</span><div class="num" style="font-size:1.3rem">${B.records.length}</div><span class="faint small">operario-mes listos para guardar</span></div>
+     <div class="panel" style="padding:12px 14px"><span class="eyebrow">Duplicados</span><div class="num" style="font-size:1.3rem">${B.dupExact}</div><span class="faint small">filas idénticas excluidas</span></div>
+     <div class="panel" style="padding:12px 14px"><span class="eyebrow">Campos vacíos</span><div class="num" style="font-size:1.3rem">${infos.filter(i=>/vacío/.test(i.msg)).length}</div><span class="faint small">celdas sin dato en columnas usadas</span></div>
+    </div>
+    ${errs.length||warns.length?`<div><span class="eyebrow">Problemas de la hoja principal</span><div class="tbl-wrap" style="max-height:220px;overflow:auto;margin-top:6px"><table><tbody>${[...errs,...warns].slice(0,60).map(i=>`<tr><td><span class="chip ${i.lvl==="err"?"err":"warn"}">${i.lvl==="err"?"Error":"Aviso"}</span></td><td class="faint small">${i.row?"Fila "+i.row:""}</td><td class="small">${i.msg}</td></tr>`).join("")}</tbody></table></div></div>`:""}
+    ${B.extra.length?`<div><span class="eyebrow">Controles con las otras hojas</span><div style="margin-top:6px;border:1px solid var(--line);border-radius:10px">${B.extra.map(c=>checkHTML(c,allow("crossChecks"))).join("")}</div></div>`:""}
+    ${B.records.length?`<div><span class="eyebrow">Vista previa (primeros 8 registros, ya normalizados)</span><div class="tbl-wrap" style="margin-top:6px"><table><thead><tr><th>Operario</th><th>Equipo</th><th>Mes</th><th class="n">Llamadas</th><th class="n">Contest.</th><th class="n">Ventas</th><th class="n">Meta</th><th class="n">Ingresos</th><th class="n">TMO</th><th class="n">Calidad</th><th class="n">Adher.</th></tr></thead><tbody>
+     ${B.records.slice(0,8).map(r=>`<tr><td>${esc(r.agent)}</td><td>${esc(r.team)}</td><td>${perLabel(r.period)}</td><td class="n">${nf(r.calls)}</td><td class="n">${nf(r.ans)}</td><td class="n">${nf(r.sales)}</td><td class="n">${nf(r.goal)}</td><td class="n">${money(r.revenue)}</td><td class="n">${mmss(r.aht)}</td><td class="n">${pctf(r.quality)}</td><td class="n">${pctf(r.adherence)}</td></tr>`).join("")}</tbody></table></div></div>`:""}
+   </div></section>`;
+}
+V.importar.after=function(){
+  const fin=$("#fileIn"),drop=$("#drop");
+  const go=async files=>{if(!files.length)return;if(typeof XLSX==="undefined"){toast("No se pudo cargar el lector de Excel. Revisa tu conexión y recarga la página.");return}
+    toast("Leyendo archivos…");UI.pending=await readFiles([...files]);render()};
+  if(fin)fin.onchange=()=>go(fin.files);
+  if(drop){["dragenter","dragover"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("over")}));["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("over")}));drop.addEventListener("drop",ev=>go(ev.dataTransfer.files))}
+  $$("[data-map]").forEach(s=>s.onchange=()=>{const[fi,k]=s.dataset.map.split("|");const F=UI.pending[+fi];const v=s.value===""?null:+s.value;for(const kk in F.map)if(F.map[kk]===v&&v!=null)delete F.map[kk];if(v==null)delete F.map[k];else F.map[k]=v;render()});
+  $$("[data-main]").forEach(s=>s.onchange=()=>{const F=UI.pending[+s.dataset.main];F.tables[F.mainIdx].role=classify(F.tables[F.mainIdx])==="summary"?"ignore":classify(F.tables[F.mainIdx]);F.mainIdx=+s.value;F.tables[F.mainIdx].role="summary";F.map=autoMap(F.tables[F.mainIdx].headers);render()});
+  $$("[data-per]").forEach(s=>s.onchange=()=>{UI.pending[+s.dataset.per].period=s.value;render()});
+  $$("[data-unit]").forEach(s=>s.onchange=()=>{UI.pending[+s.dataset.unit].ahtUnit=s.value;render()});
+  const c=$("#cancelImp");if(c)c.onclick=()=>{UI.pending=null;render()};
+  const ok=$("#confirmImp");if(ok){const valid=UI.pending.filter(F=>!F.error&&F._built&&!F._built.issues.some(i=>i.lvl==="err")&&F._built.records.length);
+    ok.disabled=!valid.length;if(!valid.length)ok.title="Corrige los errores antes de importar";
+    ok.onclick=()=>{
+      const lim=PLANS[PLAN];const after=new Set(periods());const perAgents={};
+      DB.records.forEach(r=>{(perAgents[r.period]=perAgents[r.period]||new Set()).add(r.key)});
+      valid.forEach(F=>F._built.records.forEach(r=>{after.add(r.period);(perAgents[r.period]=perAgents[r.period]||new Set()).add(r.key)}));
+      const over=Object.entries(perAgents).filter(([,s])=>s.size>lim.agents);
+      if(after.size>lim.months||over.length){
+        const next=PLAN==="free"?"starter":"pro";
+        $("#modalRoot").innerHTML=`<div class="modal-bg" id="mbg"><div class="modal" style="max-width:480px" role="dialog" aria-modal="true"><span class="chip warn" style="justify-self:start">Límite del plan ${lim.name}</span><h2 style="font-size:1.1rem">Esta importación supera tu plan</h2>
+          <p class="muted small">${after.size>lim.months?`Tu plan guarda ${lim.months===1?"1 mes":lim.months+" meses"} y con este archivo tendrías ${after.size} (${[...after].sort().map(perLabel).join(", ")}). `:""}${over.length?`Tu plan admite ${nf(lim.agents)} operarios por mes y ${over.map(([p,s])=>perLabel(p)+" tendría "+s.size).join("; ")}.`:""}</p>
+          <p class="muted small">Puedes eliminar un mes en Revisión de datos o mejorar tu plan.</p>
+          <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn" id="mClose">Cerrar</button>${PLAN!=="pro"?`<a class="btn primary" href="#pago-${next}" id="mGo">Comprar plan ${PLANS[next].name}</a>`:""}</div></div></div>`;
+        const close=()=>$("#modalRoot").innerHTML="";$("#mClose").onclick=close;const g=$("#mGo");if(g)g.onclick=close;return}
+      let n=0;const skipped=UI.pending.filter(F=>!valid.includes(F)).length;
+      valid.forEach(F=>{const B=F._built;const keys=new Set(B.records.map(r=>r.key+"|"+r.period));DB.records=DB.records.filter(r=>!keys.has(r.key+"|"+r.period)).concat(B.records);n+=B.records.length;
+        const ps=[...new Set(B.records.map(r=>r.period))];DB.checks=DB.checks.filter(c=>!(c.file===F.name)).concat(B.extra.map(c=>({...c,file:F.name,periods:ps})));
+        const hdr=F.tables[F.mainIdx].headers[F.map.revenue];if(hdr&&/s\//i.test(hdr))DB.currency="S/";else if(hdr&&/\$|usd/i.test(hdr))DB.currency="US$";else if(hdr)DB.currency="";
+        DB.imports.unshift({name:F.name,at:Date.now(),periods:ps,agents:new Set(B.records.map(r=>r.key)).size})});
+      persist();UI.pending=null;UI.f={year:"",month:"",team:"",sup:"",agent:""};
+      toast(`Importados ${n} registros${skipped?` · ${skipped} archivo(s) con errores no importados`:""}`);location.hash="dashboard";render()};}
+};
+
+/* ============ Vista: Dashboard ============ */
+V.dashboard=function(){
+  const cp=curPeriod(),pp=prevPer(cp);
+  const cur=applyF(DB.records.filter(r=>r.period===cp)),prev=applyF(DB.records.filter(r=>r.period===pp));
+  const K=kpis(cur),KP=prev.length?kpis(prev):null;
+  const P=periods();
+  const evo=P.map(p=>kpis(applyF(DB.records.filter(r=>r.period===p))));
+  const teams=[...new Set(cur.map(r=>r.team))];
+  const byTeam=teams.map(t=>({label:t,value:sum(cur.filter(r=>r.team===t),r=>r.sales)})).sort((a,b)=>b.value-a.value);
+  const ag=cur.map(agentRow).filter(r=>r.goalPct!=null);
+  const bands=[["< 80 %",ag.filter(r=>r.goalPct<80).length,"var(--amber)"],["80 – 99 %",ag.filter(r=>r.goalPct>=80&&r.goalPct<100).length,"var(--blue)"],["≥ 100 %",ag.filter(r=>r.goalPct>=100).length,"var(--green)"]];
+  const warnN=DB.checks.filter(c=>(c.lvl==="warn"||c.lvl==="err")&&(!c.periods||c.periods.includes(cp))).length;
+  return `<div class="page-h"><div><span class="eyebrow">Dashboard general · ${perLabel(cp)}</span><h1>Rendimiento de la operación</h1><p class="muted">${KP?`Comparado con ${perLabel(pp)}.`:`Sin datos de ${perLabel(pp)}: no se muestran variaciones frente al mes anterior.`}</p></div>
+   <div class="field"><label for="convBase">Conversión calculada sobre</label><select class="input" id="convBase"><option value="ans" ${UI.convBase==="ans"?"selected":""}>Llamadas contestadas</option><option value="calls" ${UI.convBase==="calls"?"selected":""}>Llamadas realizadas</option></select></div></div>
+  <section class="panel"><div class="panel-b">${filtersHTML()}</div></section>
+  ${warnN?`<a href="#revision" class="panel" style="display:flex;gap:10px;align-items:center;padding:10px 14px;text-decoration:none;color:inherit;border-color:var(--amber)"><span class="chip warn">${warnN} avisos</span><span class="small">Hay diferencias entre hojas del archivo que conviene revisar antes de sacar conclusiones.</span><span class="small" style="margin-left:auto;color:var(--blue)">Ver revisión →</span></a>`:""}
+  ${K?`<div class="kpis">${KDEF.map(([k,l,f,dir,kind,grp])=>{const v=K[k],pv=KP?KP[k]:null;const d=deltaHTML(v,pv,dir,kind);
+    const sub=k==="sales"&&K.salesVal!=null?`${nf(K.salesVal)} validadas`:k==="revenue"&&K.revVal!=null?`${money(K.revVal)} validados`:k==="goalPct"&&K.reached!=null?`${nf(K.reached,0)}% de operarios llegó a su meta`:k==="ans"&&K.contact!=null?`Contactabilidad ${pctf(K.contact)}`:"";
+    return `<div class="kpi group-${grp}"><span class="lab">${l}</span><span class="v" title="${esc(f(v))}">${f(v)}</span><span class="cmp">${d?d+`<span>vs ${shortPer(pp)}: ${f(pv)}</span>`:`<span>${v==null?"Sin dato en el archivo":"Sin mes anterior para comparar"}</span>`}</span>${sub?`<span class="cmp">${sub}</span>`:""}</div>`}).join("")}</div>
+  <p class="faint small"><span style="color:var(--green)">■</span> Productividad &nbsp; <span style="color:var(--blue)">■</span> Calidad y eficiencia. Se muestran por separado: vender más no implica atender mejor.</p>`:`<section class="panel empty"><b>No hay registros con estos filtros</b></section>`}
+  <div class="grid g2">
+   <section class="panel"><div class="panel-h"><h2>Ventas por equipo</h2><span class="faint small">${perLabel(cp)}</span></div><div class="panel-b">${byTeam.length?barChartV(byTeam):"—"}</div></section>
+   <section class="panel"><div class="panel-h"><h2>Operarios según cumplimiento de meta</h2><span class="faint small">${ag.length} con meta asignada</span></div><div class="panel-b">${ag.length?barChartV(bands.map(([l,v,c])=>({label:l,value:v,color:c}))):'<p class="muted small">El archivo no trae metas por operario.</p>'}</div></section>
+  </div>
+  <section class="panel"><div class="panel-h"><h2>Evolución mensual</h2><div class="legend"><span><i style="background:var(--green)"></i>Ventas</span><span><i style="background:var(--blue)"></i>Conversión %</span></div></div><div class="panel-b">
+   ${P.length<2?`<p class="muted small">Solo hay datos de ${perLabel(P[0])}. Importa otros meses para ver la evolución; no se completan meses sin datos.</p>`:`<div class="grid g2">${lineChart([{data:evo.map(k=>k?k.sales:null),color:"var(--green)"}],P.map(shortPer))}${lineChart([{data:evo.map(k=>k?k.conv:null),color:"var(--blue)"}],P.map(shortPer),{fmt:v=>nf(v,1),yMin0:false})}</div>`}
+  </div></section>`;
+};
+V.dashboard.after=function(){const c=$("#convBase");if(c)c.onchange=()=>{UI.convBase=c.value;LS.set("convBase",c.value);render()}};
+
+/* ============ Vista: Ranking ============ */
+const RANK=[["sales","Ventas",1,v=>nf(v),"p"],["goalPct","Cumplimiento",1,v=>pctf(v),"p"],["conv","Conversión",1,v=>pctf(v,2),"p"],["revenue","Ingresos",1,v=>money(v),"p"],["quality","Calidad",1,v=>pctf(v),"q"],["adherence","Adherencia",1,v=>pctf(v),"q"],["aht","Menor TMO",-1,v=>mmss(v),"q"]];
+V.ranking=function(){
+  const cp=curPeriod();const rows=applyF(DB.records.filter(r=>r.period===cp),{noAgent:true}).map(agentRow);
+  const def=RANK.find(x=>x[0]===UI.rankBy);const k=def[0];
+  const valid=rows.filter(r=>r[k]!=null);
+  const sorted=[...valid].sort((a,b)=>def[2]===-1?a[k]-b[k]:b[k]-a[k]);
+  const top=sorted.slice(0,10),bottom=sorted.slice(-10).reverse();
+  const max=Math.max(...valid.map(r=>r[k]));
+  const tbl=[...rows].sort((a,b)=>{const x=a[k],y=b[k];if(x==null)return 1;if(y==null)return-1;return (def[2]===-1?x-y:y-x)});
+  return `<div class="page-h"><div><span class="eyebrow">Ranking de operarios · ${perLabel(cp)}</span><h1>¿Quién destaca y quién necesita apoyo?</h1><p class="muted">Haz clic en un operario para abrir su ficha. Un resultado bajo es una señal para revisar, no una conclusión sobre la persona.</p></div></div>
+  <section class="panel"><div class="panel-b" style="display:grid;gap:12px">${filtersHTML(false)}
+   <div class="filters"><div class="field"><label for="rankBy">Ordenar ranking por</label><select class="input" id="rankBy">${RANK.map(([kk,l,,,g])=>`<option value="${kk}" ${kk===k?"selected":""}>${g==="p"?"Productividad · ":"Calidad · "}${kk==="aht"?"Menor tiempo de atención":"Mayor "+l.toLowerCase()}</option>`).join("")}</select></div></div></div></section>
+  ${!valid.length?`<section class="panel empty"><b>El archivo no trae ${def[1].toLowerCase()}</b><span>Elige otro criterio.</span></section>`:`
+  <div class="grid g2">
+   <section class="panel"><div class="panel-h"><h2>Top 10 · ${def[1]}</h2><span class="chip ok">Destacados</span></div><div class="panel-b">${hbars(top.map(r=>({label:r.agent,value:r[k],click:r.key,cls:def[4]==="q"?"q":""})),{fmt:def[3],max:def[2]===-1?max:undefined})}</div></section>
+   <section class="panel"><div class="panel-h"><h2>10 que necesitan apoyo · ${def[1]}</h2><span class="chip warn">Revisar contexto</span></div><div class="panel-b">${hbars(bottom.map(r=>({label:r.agent,value:r[k],click:r.key,cls:"low"})),{fmt:def[3],max})}</div></section>
+  </div>`}
+  ${!allow("fullRanking")?lockPanel("starter",`Ranking completo de los ${rows.length} operarios`,"Ve la tabla completa con productividad y calidad por separado, ordénala por cualquier indicador y abre la ficha individual de cada operario."):`<section class="panel"><div class="panel-h"><h2>Todos los operarios (${rows.length})</h2><button class="btn sm" data-copy="rankTbl">Copiar tabla para Excel</button></div>
+   <div class="tbl-wrap"><table id="rankTbl"><thead><tr><th>#</th><th>Operario</th><th>Equipo</th><th>Supervisor</th>
+   ${[["sales","Ventas","p"],["goal","Meta","p"],["goalPct","Cumpl.","p"],["conv","Conv.","p"],["revenue","Ingresos","p"],["quality","Calidad","q"],["adherence","Adher.","q"],["aht","TMO","q"]].map(([kk,l,g])=>`<th class="n grp-${g} ${RANK.some(x=>x[0]===kk)?"sort":""} ${kk===k?"on":""}" ${RANK.some(x=>x[0]===kk)?`data-sort="${kk}"`:""}>${l}${kk===k?(def[2]===-1?" ↑":" ↓"):""}</th>`).join("")}</tr></thead><tbody>
+   ${tbl.map((r,i)=>`<tr class="click" data-agent="${esc(r.key)}"><td class="num faint">${r[k]!=null?i+1:"—"}</td><td><b style="font-weight:500">${esc(r.agent)}</b>${r.agentId&&r.agentId!==r.agent?` <span class="faint small">${esc(r.agentId)}</span>`:""}</td><td>${esc(r.team)}</td><td>${esc(r.sup)}</td><td class="n">${nf(r.sales)}</td><td class="n">${nf(r.goal)}</td><td class="n" style="color:${r.goalPct==null?"":r.goalPct>=100?"var(--green)":r.goalPct<80?"var(--amber)":""}">${pctf(r.goalPct)}</td><td class="n">${pctf(r.conv,2)}</td><td class="n">${money(r.revenue)}</td><td class="n">${pctf(r.quality)}</td><td class="n">${pctf(r.adherence)}</td><td class="n">${mmss(r.aht)}</td></tr>`).join("")}
+   </tbody></table></div></section>`}`;
+};
+V.ranking.after=function(){$("#rankBy").onchange=e=>{UI.rankBy=e.target.value;render()};$$("[data-sort]").forEach(th=>th.onclick=()=>{UI.rankBy=th.dataset.sort;render()})};
+
+/* ============ Vista: Equipos ============ */
+V.equipos=function(){
+  if(!allow("teams"))return `<div class="page-h"><div><span class="eyebrow">Análisis por equipos</span><h1>Comparación entre equipos</h1></div></div>`+lockPanel("starter","Compara tus equipos","Ventas, ingresos, ventas por operario, cumplimiento, conversión, calidad y tiempo de atención por equipo, con filtro por supervisor.");
+  const cp=curPeriod();const sups=[...new Set(DB.records.map(r=>r.sup))].sort();
+  const cur=DB.records.filter(r=>r.period===cp&&(!UI.teamSup||r.sup===UI.teamSup));
+  const teams=[...new Set(cur.map(r=>r.team))].sort();
+  const T=teams.map(t=>({t,k:kpis(cur.filter(r=>r.team===t)),sups:[...new Set(cur.filter(r=>r.team===t).map(r=>r.sup))]}));
+  const all=kpis(cur);
+  const chart=(key,label,fmt,col)=>`<section class="panel"><div class="panel-h"><h2>${label}</h2></div><div class="panel-b">${barChartV(T.map(x=>({label:x.t,value:x.k[key]})),{fmt,color:col})}</div></section>`;
+  return `<div class="page-h"><div><span class="eyebrow">Análisis por equipos · ${perLabel(cp)}</span><h1>Comparación entre equipos</h1></div>
+   <div class="filters"><div class="field"><label for="fy">Año</label>${filtersHTML(false).match(/<select class="input" id="fy">[\s\S]*?<\/select>/)[0]}</div><div class="field"><label for="fm">Mes</label>${filtersHTML(false).match(/<select class="input" id="fm">[\s\S]*?<\/select>/)[0]}</div>
+   <div class="field"><label for="teamSup">Supervisor</label><select class="input" id="teamSup"><option value="">Todos</option>${sups.map(s=>`<option ${s===UI.teamSup?"selected":""}>${esc(s)}</option>`).join("")}</select></div></div></div>
+  <section class="panel"><div class="panel-h"><h2>Resumen por equipo</h2><button class="btn sm" data-copy="teamTbl">Copiar tabla para Excel</button></div><div class="tbl-wrap"><table id="teamTbl"><thead><tr><th>Equipo</th><th>Supervisores</th><th class="n">Operarios</th><th class="n grp-p">Ventas</th><th class="n grp-p">Ingresos</th><th class="n grp-p">Ventas/operario</th><th class="n grp-p">Cumplimiento</th><th class="n grp-p">Conversión</th><th class="n grp-q">Calidad</th><th class="n grp-q">TMO</th></tr></thead><tbody>
+   ${T.map(x=>`<tr><td><b style="font-weight:500">${esc(x.t)}</b></td><td class="small faint">${x.sups.map(esc).join(", ")}</td><td class="n">${x.k.ops}</td><td class="n">${nf(x.k.sales)}</td><td class="n">${money(x.k.revenue)}</td><td class="n">${nf(x.k.salesPerOp,1)}</td><td class="n">${pctf(x.k.goalPct)}</td><td class="n">${pctf(x.k.conv,2)}</td><td class="n">${pctf(x.k.quality)}</td><td class="n">${mmss(x.k.aht)}</td></tr>`).join("")}
+   ${all?`<tr><td><b>Total</b></td><td></td><td class="n"><b>${all.ops}</b></td><td class="n"><b>${nf(all.sales)}</b></td><td class="n"><b>${money(all.revenue)}</b></td><td class="n"><b>${nf(all.salesPerOp,1)}</b></td><td class="n"><b>${pctf(all.goalPct)}</b></td><td class="n"><b>${pctf(all.conv,2)}</b></td><td class="n"><b>${pctf(all.quality)}</b></td><td class="n"><b>${mmss(all.aht)}</b></td></tr>`:""}
+  </tbody></table></div></section>
+  ${T.length?`<div class="grid g2">${chart("sales","Ventas totales",v=>nf(v),"var(--green)")}${chart("revenue","Ingresos",v=>money(v),"var(--green)")}${chart("salesPerOp","Ventas promedio por operario",v=>nf(v,1),"var(--green)")}${chart("goalPct","Cumplimiento de metas",v=>pctf(v),"var(--green)")}${chart("conv","Conversión",v=>pctf(v,2),"var(--green)")}${chart("quality","Calidad promedio",v=>pctf(v),"var(--blue)")}${chart("aht","Tiempo promedio de atención (min)",v=>mmss(v),"var(--blue)")}</div>`:`<section class="panel empty"><b>Sin equipos con este filtro</b></section>`}`;
+};
+V.equipos.after=function(){if(!$("#teamSup"))return;$("#teamSup").onchange=e=>{UI.teamSup=e.target.value;render()}};
+
+/* ============ Vista: Comparar meses ============ */
+V.comparar=function(){
+  if(!allow("compare"))return `<div class="page-h"><div><span class="eyebrow">Comparar meses</span><h1>Comparación entre meses</h1></div></div>`+lockPanel("starter","Compara un mes con otro","Diferencias absolutas y porcentuales en ventas, ingresos, conversión, calidad y tiempos, y qué operarios mejoraron o empeoraron. El plan Gratis guarda un solo mes.");
+  const P=periods();
+  if(P.length<2)return `<div class="page-h"><div><span class="eyebrow">Comparar meses</span><h1>Comparación entre meses</h1></div></div><section class="panel empty"><b>Hace falta al menos un segundo mes</b><span>Solo hay datos de ${P.map(perLabel).join(", ")}. Importa el Excel de otro mes para comparar. No se generan comparaciones con meses sin datos.</span><a class="btn primary" href="#importar">Importar otro mes</a></section>`;
+  const A=UI.cmpA&&P.includes(UI.cmpA)?UI.cmpA:P[P.length-2],B=UI.cmpB&&P.includes(UI.cmpB)?UI.cmpB:P[P.length-1];
+  const RA=applyF(DB.records.filter(r=>r.period===A),{noAgent:true}),RB=applyF(DB.records.filter(r=>r.period===B),{noAgent:true});
+  const KA=kpis(RA),KB=kpis(RB);
+  const rowsK=[...KDEF,["salesVal","Ventas validadas",v=>nf(v),1,"n","p"],["salesPerOp","Ventas por operario (productividad)",v=>nf(v,1),1,"n","p"]];
+  const mA=new Map(RA.map(r=>[r.key,agentRow(r)])),both=RB.map(agentRow).filter(r=>mA.has(r.key)).map(r=>({r,a:mA.get(r.key),d:(r.sales??0)-(mA.get(r.key).sales??0),dq:r.quality!=null&&mA.get(r.key).quality!=null?r.quality-mA.get(r.key).quality:null}));
+  const better=both.filter(x=>x.d>0).sort((a,b)=>b.d-a.d),worse=both.filter(x=>x.d<0).sort((a,b)=>a.d-b.d);
+  const onlyA=RA.filter(r=>!RB.some(x=>x.key===r.key)),onlyB=RB.filter(r=>!RA.some(x=>x.key===r.key));
+  const sel=(id,v)=>`<select class="input" id="${id}">${P.map(p=>`<option value="${p}" ${p===v?"selected":""}>${perLabel(p)}</option>`).join("")}</select>`;
+  const fmtD=(a,b,f,kind)=>{if(a==null||b==null)return["—","—"];const d=b-a;if(kind==="pp")return[(d>0?"+":"")+nf(d,1)+" pp","—"];return[(d>0?"+":d<0?"−":"")+f(Math.abs(d)).replace(/^—$/,"0"),a?(d>0?"+":"")+nf(d/a*100,1)+"%":"—"]};
+  const evo=P.map(p=>kpis(applyF(DB.records.filter(r=>r.period===p),{noAgent:true})));
+  return `<div class="page-h"><div><span class="eyebrow">Comparar meses</span><h1>${perLabel(A)} vs. ${perLabel(B)}</h1><p class="muted">Variaciones absolutas y porcentuales. Para indicadores que ya son porcentajes se usa la diferencia en puntos porcentuales (pp).</p></div>
+   <div class="filters"><div class="field"><label for="cmpA">Mes base</label>${sel("cmpA",A)}</div><div class="field"><label for="cmpB">Mes a comparar</label>${sel("cmpB",B)}</div></div></div>
+  <section class="panel"><div class="panel-b">${filtersHTML(false).replace(/<div class="field"><label for="fy">[\s\S]*?<\/select><\/div>\s*<div class="field"><label for="fm">[\s\S]*?<\/select><\/div>/,"")}</div></section>
+  <section class="panel"><div class="panel-h"><h2>Indicadores</h2><button class="btn sm" data-copy="cmpTbl">Copiar tabla para Excel</button></div><div class="tbl-wrap"><table id="cmpTbl"><thead><tr><th>Indicador</th><th class="n">${perLabel(A)}</th><th class="n">${perLabel(B)}</th><th class="n">Variación</th><th class="n">Variación %</th><th></th></tr></thead><tbody>
+   ${rowsK.map(([k,l,f,dir,kind])=>{const a=KA?KA[k]:null,b=KB?KB[k]:null;const[d,p]=fmtD(a,b,f,kind);return `<tr><td>${l}</td><td class="n">${f(a)}</td><td class="n">${f(b)}</td><td class="n">${d}</td><td class="n">${p}</td><td>${deltaHTML(b,a,dir,kind)||'<span class="faint small">sin dato</span>'}</td></tr>`}).join("")}
+  </tbody></table></div></section>
+  <div class="grid g2">
+   <section class="panel"><div class="panel-h"><h2>Mejoraron en ventas</h2><span class="chip ok">${better.length}</span></div><div class="panel-b">${better.length?hbars(better.slice(0,12).map(x=>({label:x.r.agent,value:x.d,click:x.r.key})),{fmt:v=>"+"+nf(v)}):'<p class="muted small">Nadie aumentó sus ventas.</p>'}</div></section>
+   <section class="panel"><div class="panel-h"><h2>Empeoraron en ventas</h2><span class="chip warn">${worse.length}</span></div><div class="panel-b">${worse.length?hbars(worse.slice(0,12).map(x=>({label:x.r.agent,value:-x.d,click:x.r.key,cls:"low"})),{fmt:v=>"−"+nf(v)}):'<p class="muted small">Nadie redujo sus ventas.</p>'}</div></section>
+  </div>
+  ${onlyA.length||onlyB.length?`<section class="panel"><div class="panel-b small muted">${onlyA.length?`Solo en ${perLabel(A)}: ${onlyA.map(r=>esc(r.agent)).join(", ")}. `:""}${onlyB.length?`Solo en ${perLabel(B)}: ${onlyB.map(r=>esc(r.agent)).join(", ")}.`:""} Estos operarios no se incluyen en mejoras ni empeoramientos.</div></section>`:""}
+  <section class="panel"><div class="panel-h"><h2>Evolución de todos los meses importados</h2><div class="legend"><span><i style="background:var(--green)"></i>Cumplimiento %</span><span><i style="background:var(--blue)"></i>Calidad %</span></div></div><div class="panel-b">${lineChart([{data:evo.map(k=>k&&k.goalPct),color:"var(--green)"},{data:evo.map(k=>k&&k.quality),color:"var(--blue)"}],P.map(shortPer),{fmt:v=>nf(v,0),yMin0:false})}</div></section>`;
+};
+V.comparar.after=function(){const a=$("#cmpA"),b=$("#cmpB");if(a)a.onchange=()=>{UI.cmpA=a.value;render()};if(b)b.onchange=()=>{UI.cmpB=b.value;render()}};
+
+/* ============ Vista: Revisión de datos ============ */
+function checkHTML(c,showList=true){return `<div class="check"><span class="sev ${c.lvl}"></span><div><b style="font-weight:500">${esc(c.title)}</b><p class="muted small">${esc(c.detail||"")}${c.file?` · Archivo: ${esc(c.file)}`:""}</p>${c.list&&c.list.length&&!showList?`<p class="small" style="margin-top:4px"><a href="#planes" style="color:var(--blue)">Ver los ${c.list.length} casos con un plan superior</a></p>`:""}${c.list&&c.list.length&&showList?`<details><summary>Ver ${c.list.length} casos</summary><ul class="small muted" style="margin:6px 0 0;padding-left:18px">${c.list.slice(0,100).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></details>`:""}</div></div>`}
+V.revision=function(){
+  const cp=curPeriod(),R=DB.records.filter(r=>r.period===cp);
+  const gaps=[];const reqs=[["calls","llamadas realizadas"],["ans","llamadas contestadas"],["sales","ventas"],["goal","meta"],["quality","calidad"],["adherence","adherencia"],["aht","tiempo de atención"]];
+  reqs.forEach(([k,l])=>{const miss=R.filter(r=>r[k]==null);if(miss.length&&miss.length<R.length)gaps.push({lvl:"warn",title:`${miss.length} operarios sin dato de ${l} en ${perLabel(cp)}`,list:miss.map(r=>r.agent)});if(miss.length===R.length)gaps.push({lvl:"info",title:`El archivo de ${perLabel(cp)} no trae ${l}`,detail:"Los indicadores que dependen de este dato se muestran como “—”."})});
+  const val=R.filter(r=>r.salesVal!=null&&r.sales);const lowVal=val.filter(r=>r.salesVal/r.sales<0.85);
+  if(val.length)gaps.push({lvl:lowVal.length?"warn":"ok",title:lowVal.length?`${lowVal.length} operarios con menos del 85% de sus ventas validadas`:"Todas las ventas registradas tienen una tasa de validación de al menos 85%",detail:"Diferencia entre ventas registradas y validadas (pendientes + anuladas). Puede deberse a ventas aún en proceso; no implica por sí sola un problema del operario.",list:lowVal.map(r=>`${r.agent}: ${r.salesVal} de ${r.sales} validadas (${nf(r.salesVal/r.sales*100,1)}%) · ${r.salesPend||0} pendientes · ${r.salesAnul||0} anuladas`)});
+  const C=DB.checks.filter(c=>!c.periods||c.periods.includes(cp));
+  return `<div class="page-h"><div><span class="eyebrow">Revisión de datos · ${perLabel(cp)}</span><h1>Calidad de los datos importados</h1><p class="muted">Controles automáticos sobre lo importado. Cada aviso indica qué datos lo respaldan.</p></div>
+   <div class="filters"><div class="field"><label for="fy">Año</label>${filtersHTML(false).match(/<select class="input" id="fy">[\s\S]*?<\/select>/)[0]}</div><div class="field"><label for="fm">Mes</label>${filtersHTML(false).match(/<select class="input" id="fm">[\s\S]*?<\/select>/)[0]}</div></div></div>
+  ${allow("crossChecks")?`<section class="panel"><div class="panel-h"><h2>Controles entre hojas del archivo</h2></div>${C.length?C.map(c=>checkHTML(c)).join(""):'<div class="empty">No había otras hojas para contrastar.</div>'}</section>`:lockPanel("pro","Controles entre hojas del archivo",`${C.filter(c=>c.lvl==="warn").length?`Encontramos ${C.filter(c=>c.lvl==="warn").length} diferencias entre las hojas de tu archivo. `:""}El plan Pro compara el resumen con el detalle de ventas y la actividad diaria, y muestra ventas registradas frente a validadas por operario.`)}
+  <section class="panel"><div class="panel-h"><h2>Datos incompletos y ventas validadas</h2></div>${gaps.length?gaps.map(c=>checkHTML(c,allow("checkDetails"))).join(""):'<div class="empty">Sin campos vacíos en los datos usados.</div>'}</section>
+  <section class="panel"><div class="panel-h"><h2>Datos guardados en este navegador</h2></div><div class="panel-b" style="display:grid;gap:12px">
+   <p class="small muted">${DB.records.length} registros de ${periods().map(perLabel).join(", ")}. Se guardan solo en este navegador y no se envían a ningún servidor.</p>
+   <div style="display:flex;gap:8px;flex-wrap:wrap">${periods().map(p=>`<button class="btn sm" data-delper="${p}">Eliminar ${perLabel(p)}</button>`).join("")}<button class="btn sm danger" id="delAll">Eliminar todos los datos</button></div>
+   <div id="confirmBox"></div></div></section>`;
+};
+V.revision.after=function(){
+  const ask=(msg,fn)=>{$("#confirmBox").innerHTML=`<div class="panel" style="padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-color:var(--red)"><span class="small">${msg}</span><button class="btn sm danger" id="yes">Sí, eliminar</button><button class="btn sm" id="no">Cancelar</button></div>`;$("#yes").onclick=fn;$("#no").onclick=()=>$("#confirmBox").innerHTML=""};
+  $$("[data-delper]").forEach(b=>b.onclick=()=>ask(`¿Eliminar todos los registros de ${perLabel(b.dataset.delper)}? No se puede deshacer.`,()=>{const p=b.dataset.delper;DB.records=DB.records.filter(r=>r.period!==p);DB.checks=DB.checks.filter(c=>!(c.periods&&c.periods.length===1&&c.periods[0]===p));persist();UI.f.month="";toast(`Datos de ${perLabel(p)} eliminados`);render()}));
+  $("#delAll").onclick=()=>ask("¿Eliminar todos los datos importados de este navegador? No se puede deshacer.",()=>{DB={records:[],imports:[],checks:[],currency:"S/"};LS.del("db");toast("Datos eliminados");location.hash="importar";render()});
+};
+
+/* ============ Vista: Planes ============ */
+const CHECK='<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8.5 3 3 6-7"/></svg>',XMARK='<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/></svg>';
+V.planes=function(){
+  return `<div class="page-h"><div><span class="eyebrow">Planes y precios</span><h1>Elige el plan para tu operación</h1><p class="muted">Precios mensuales en soles. Puedes cambiar de plan cuando quieras.</p></div></div>
+  <div class="plans">${["free","starter","pro"].map((k,i)=>{const p=PLANS[k];return `<div class="plan ${k==="starter"?"feat":""}">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><h2 style="font-size:1.05rem">${p.name}</h2>${PLAN===k?'<span class="chip ok">Tu plan actual</span>':k==="starter"?'<span class="chip info">Recomendado</span>':""}</div>
+    <div><span class="amt">S/ ${p.price}</span><span class="faint"> /mes</span></div>
+    <p class="muted small">${p.tag}</p>
+    <ul>${PLAN_FEATURES.map(([l,...v])=>{const val=typeof v[0]==="function"?v[0](i):v[i];return `<li class="${val?"":"no"}">${val?CHECK:XMARK}<span>${typeof v[0]==="function"?`${l}: <b>${val}</b>`:l}</span></li>`}).join("")}</ul>
+    ${PLAN===k?`<button class="btn" disabled>Plan actual</button>`:k==="free"?`<button class="btn" id="toFree">Volver al plan Gratis</button>`:`<a class="btn ${k==="starter"?"primary":""}" href="#pago-${k}">Comprar plan ${p.name}</a>`}
+  </div>`}).join("")}</div>
+  <section class="panel"><div class="panel-b small muted" style="display:grid;gap:4px"><b style="color:var(--fg)">Próximamente en Pro</b><span>Analista IA con informe ejecutivo, detección de anomalías y descarga de informes en PDF y Excel. Se anunciarán con su precio antes de activarse.</span></div></section>
+  <div id="confirmBox"></div>`;
+};
+V.planes.after=function(){const b=$("#toFree");if(b)b.onclick=()=>{$("#confirmBox").innerHTML=`<div class="panel" style="padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-color:var(--amber)"><span class="small">Al volver al plan Gratis pierdes el ranking completo, las fichas, equipos y comparación de meses. Tus datos no se borran, pero no podrás importar más si superan el límite.</span><button class="btn sm" id="yes">Cambiar a Gratis</button><button class="btn sm" id="no">Cancelar</button></div>`;$("#yes").onclick=()=>{setPlan("free");toast("Ahora estás en el plan Gratis");render()};$("#no").onclick=()=>$("#confirmBox").innerHTML=""}};
+
+/* ============ Vista: Pago ============ */
+V.pago=function(k){
+  if(!PLANS[k]||k==="free")k="starter";
+  const p=PLANS[k],link=PAYMENT_LINKS[k];
+  const igvBase=p.price/1.18;
+  return `<a href="#planes" class="btn ghost sm" style="justify-self:start">← Volver a planes</a>
+  <div class="page-h"><div><span class="eyebrow">Pago</span><h1>Comprar plan ${p.name}</h1><p class="muted">Suscripción mensual. Puedes cancelarla cuando quieras.</p></div>
+   <div class="steps"><span class="done">1 · Elegir plan</span><span class="on">2 · Pagar</span><span>3 · Activación</span></div></div>
+  <div class="checkout">
+   <section class="panel"><div class="panel-h"><h2>Medio de pago</h2><span class="chip">Pago seguro en la pasarela</span></div><div class="panel-b" style="display:grid;gap:14px">
+    ${link?`<p class="small muted">Al continuar se abrirá la página de pago de la pasarela en una pestaña nueva. Allí eliges tu medio de pago e ingresas tus datos. <b>Esta aplicación no ve ni guarda los datos de tu tarjeta.</b></p>
+      <a class="btn primary" href="${esc(link)}" target="_blank" rel="noopener noreferrer" style="padding:12px 16px;font-size:.95rem">Pagar ${soles(p.price)} y continuar</a>
+      <div class="panel" style="padding:12px 14px;background:var(--surface-2)"><b class="small">Después de pagar</b><p class="small muted">Recibirás el comprobante de la pasarela en tu correo. Tu plan ${p.name} se activa cuando se confirma el pago.</p></div>`
+    :`<div class="panel" style="padding:14px 16px;border-color:var(--amber);display:grid;gap:6px"><span class="chip warn" style="justify-self:start">Pago en línea aún no disponible</span><p class="small">Todavía no hay un enlace de pago configurado para este plan, así que no se puede cobrar desde aquí. No se ha realizado ningún cargo.</p></div>`}
+    <div style="border-top:1px solid var(--line);padding-top:14px;display:grid;gap:8px"><span class="eyebrow">Modo prueba</span><p class="small muted">Para revisar cómo funciona la aplicación con este plan, puedes activarlo sin pagar. Es solo una simulación en este navegador: no se cobra nada.</p><button class="btn" id="simulate" style="justify-self:start">Activar ${p.name} en modo prueba</button></div>
+   </div></section>
+   <section class="panel"><div class="panel-h"><h2>Resumen</h2></div><div class="panel-b">
+    <div class="sumrow"><span>Plan</span><b>${p.name}</b></div>
+    <div class="sumrow"><span>Facturación</span><span>Mensual</span></div>
+    <div class="sumrow"><span>Meses guardados</span><span>Hasta ${p.months}</span></div>
+    <div class="sumrow"><span>Operarios por mes</span><span>Hasta ${nf(p.agents)}</span></div>
+    <div class="sumrow"><span>Valor de venta</span><span class="num">${soles(igvBase)}</span></div>
+    <div class="sumrow"><span>IGV (18%)</span><span class="num">${soles(p.price-igvBase)}</span></div>
+    <div class="sumrow" style="font-size:1rem"><b>Total mensual</b><b class="num">${soles(p.price)}</b></div>
+    <p class="faint small" style="margin-top:10px">Precio con IGV incluido. ${PLAN!=="free"?`Tu plan actual es ${PLANS[PLAN].name}.`:""}</p>
+   </div></section>
+  </div>`;
+};
+V.pago.after=function(k){if(!PLANS[k]||k==="free")k="starter";$("#simulate").onclick=()=>{setPlan(k);toast(`Plan ${PLANS[k].name} activado en modo prueba (sin cobro)`);location.hash=DB.records.length?"dashboard":"importar"}};
+
+/* ============ Ficha individual ============ */
+function agentModal(key){
+  if(!allow("agentFile")){$("#modalRoot").innerHTML=`<div class="modal-bg" id="mbg"><div class="modal" style="max-width:520px">${lockPanel("starter","Ficha individual del operario","Datos generales, ventas, cumplimiento, conversión, calidad, adherencia, tiempos y comparación con el promedio de su equipo.")}<button class="btn" id="mClose" style="justify-self:end">Cerrar</button></div></div>`;const close=()=>$("#modalRoot").innerHTML="";$("#mClose").onclick=close;$("#mbg").onclick=e=>{if(e.target.id==="mbg"||e.target.closest("a"))close()};return}
+  const hist=DB.records.filter(r=>r.key===key).sort((a,b)=>a.period.localeCompare(b.period)).map(agentRow);if(!hist.length)return;
+  const cp=curPeriod();const r=hist.find(h=>h.period===cp)||hist[hist.length-1];
+  const team=DB.records.filter(x=>x.period===r.period&&x.team===r.team).map(agentRow);
+  const avg=k=>{const v=team.map(x=>x[k]).filter(x=>x!=null);return v.length?v.reduce((s,x)=>s+x,0)/v.length:null};
+  const rows=[["Ventas registradas","sales",v=>nf(v),1],["Ventas validadas","salesVal",v=>nf(v),1],["Meta","goal",v=>nf(v),0],["Cumplimiento","goalPct",v=>pctf(v),1],["Conversión","conv",v=>pctf(v,2),1],["Llamadas realizadas","calls",v=>nf(v),0],["Llamadas contestadas","ans",v=>nf(v),0],["Ingresos","revenue",v=>money(v),1],["Calidad","quality",v=>pctf(v),1],["Adherencia","adherence",v=>pctf(v),1],["Tiempo prom. de atención","aht",v=>mmss(v),-1],["Ausencias","absences",v=>nf(v),-1]].filter(([,k])=>r[k]!=null);
+  $("#modalRoot").innerHTML=`<div class="modal-bg" id="mbg"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt">
+   <div style="display:flex;justify-content:space-between;gap:12px;align-items:start"><div><span class="eyebrow">Ficha del operario · ${perLabel(r.period)}</span><h1 id="mt">${esc(r.agent)}</h1><p class="muted small">${r.agentId&&r.agentId!==r.agent?esc(r.agentId)+" · ":""}${esc(r.team)} · ${esc(r.sup)}</p></div><button class="btn" id="mClose">Cerrar</button></div>
+   <div class="kpis" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+    ${[["Ventas",nf(r.sales),"p"],["Cumplimiento",pctf(r.goalPct),"p"],["Conversión",pctf(r.conv,2),"p"],["Ingresos",money(r.revenue),"p"],["Calidad",pctf(r.quality),"q"],["Adherencia",pctf(r.adherence),"q"],["TMO",mmss(r.aht),"q"]].map(([l,v,g])=>`<div class="kpi group-${g}"><span class="lab">${l}</span><span class="v" style="font-size:1.15rem">${v}</span></div>`).join("")}
+   </div>
+   <section class="panel"><div class="panel-h"><h2>Comparación con el promedio de su equipo</h2><span class="faint small">${esc(r.team)} · ${team.length} operarios</span></div><div class="tbl-wrap"><table><thead><tr><th>Indicador</th><th class="n">Operario</th><th class="n">Promedio del equipo</th><th class="n">Diferencia</th></tr></thead><tbody>
+    ${rows.map(([l,k,f,dir])=>{const a=avg(k);const d=r[k]!=null&&a!=null?r[k]-a:null;const cls=d==null||dir===0||Math.abs(d)<1e-9?"flat":d*dir>0?"good":"bad";return `<tr><td>${l}</td><td class="n">${f(r[k])}</td><td class="n">${f(a)}</td><td class="n">${d==null?"—":`<span class="delta ${cls}">${d>0?"+":"−"}${k==="aht"?mmss(Math.abs(d)):k==="revenue"?money(Math.abs(d)):["goalPct","conv","quality","adherence"].includes(k)?nf(Math.abs(d),1)+" pp":nf(Math.abs(d),1)}</span>`}</td></tr>`}).join("")}
+   </tbody></table></div></section>
+   <section class="panel"><div class="panel-h"><h2>Evolución histórica</h2></div><div class="panel-b">${hist.length<2?`<p class="muted small">Solo hay datos de ${perLabel(hist[0].period)}. La evolución aparecerá al importar más meses.</p>`:`<div class="legend" style="margin-bottom:6px"><span><i style="background:var(--green)"></i>Ventas</span><span><i style="background:var(--blue)"></i>Calidad %</span></div><div class="grid g2">${lineChart([{data:hist.map(h=>h.sales),color:"var(--green)"}],hist.map(h=>shortPer(h.period)))}${lineChart([{data:hist.map(h=>h.quality),color:"var(--blue)"}],hist.map(h=>shortPer(h.period)),{yMin0:false,fmt:v=>nf(v,0)})}</div>`}
+    <div class="tbl-wrap" style="margin-top:10px"><table><thead><tr><th>Mes</th><th class="n">Ventas</th><th class="n">Cumpl.</th><th class="n">Conv.</th><th class="n">Llamadas</th><th class="n">Contest.</th><th class="n">Calidad</th><th class="n">Adher.</th><th class="n">TMO</th></tr></thead><tbody>${hist.map(h=>`<tr><td>${perLabel(h.period)}</td><td class="n">${nf(h.sales)}</td><td class="n">${pctf(h.goalPct)}</td><td class="n">${pctf(h.conv,2)}</td><td class="n">${nf(h.calls)}</td><td class="n">${nf(h.ans)}</td><td class="n">${pctf(h.quality)}</td><td class="n">${pctf(h.adherence)}</td><td class="n">${mmss(h.aht)}</td></tr>`).join("")}</tbody></table></div></div></section>
+   ${r.salesVal!=null?`<p class="small muted">Estado de sus ventas en el detalle: ${nf(r.salesVal)} validadas, ${nf(r.salesPend||0)} pendientes, ${nf(r.salesAnul||0)} anuladas.</p>`:""}
+  </div></div>`;
+  const close=()=>$("#modalRoot").innerHTML="";$("#mClose").onclick=close;$("#mbg").onclick=e=>{if(e.target.id==="mbg")close()};$("#mClose").focus();
+}
+
+/* ============ Copiar tabla (en lugar de descarga, que el visor bloquea) ============ */
+function copyTable(id){if(!allow("copy")){toast("Copiar tablas está disponible desde el plan Starter");return}const t=document.getElementById(id);if(!t)return;
+  const txt=[...t.rows].map(r=>[...r.cells].map(c=>c.innerText.replace(/[↑↓]/g,"").trim()).join("\t")).join("\n");
+  const fallback=()=>{const ta=document.createElement("textarea");ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast("Tabla copiada. Pégala en Excel con Ctrl+V")}catch(e){toast("Selecciona la tabla y cópiala manualmente")}ta.remove()};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>toast("Tabla copiada. Pégala en Excel con Ctrl+V"),fallback);else fallback()}
+
+/* ============ Global ============ */
+$("#themeBtn").onclick=()=>{const dark=UI.theme?UI.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;UI.theme=dark?"light":"dark";document.documentElement.setAttribute("data-theme",UI.theme);LS.set("theme",UI.theme)};
+$("#menuBtn").onclick=()=>{$("#side").classList.add("open");const s=document.createElement("div");s.className="scrim";s.onclick=()=>{$("#side").classList.remove("open");s.remove()};document.body.appendChild(s)};
+document.addEventListener("keydown",e=>{if(e.key==="Escape")$("#modalRoot").innerHTML=""});
+window.addEventListener("hashchange",()=>{render();window.scrollTo(0,0)});
+render();
+})();
+</script>
+
+</body></html>
